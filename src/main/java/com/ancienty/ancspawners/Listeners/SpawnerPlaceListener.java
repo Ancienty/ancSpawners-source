@@ -1,6 +1,7 @@
 package com.ancienty.ancspawners.Listeners;
 
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.Protection.GriefPreventionSupport;
 import com.ancienty.ancspawners.Protection.SSB2Support;
 import com.ancienty.ancspawners.Protection.TownySupport;
 import com.ancienty.ancspawners.Protection.WorldGuardSupport;
@@ -30,6 +31,13 @@ public class SpawnerPlaceListener implements Listener {
         if (!e.isCancelled()) {
             if (e.getBlockPlaced().getType() == XMaterial.SPAWNER.parseMaterial()) {
                 // Protection elements.
+
+                if (Main.getPlugin().getServer().getPluginManager().isPluginEnabled("GriefPrevention")) {
+                    if (!new GriefPreventionSupport().canPlace(e.getPlayer(), e.getBlockPlaced())) {
+                        e.setCancelled(true);
+                        return;
+                    }
+                }
 
                 if (Main.getPlugin().getServer().getPluginManager().isPluginEnabled("Towny")) {
                     if (!new TownySupport().canPlace(e.getPlayer(), e.getBlockPlaced())) {

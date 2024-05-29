@@ -38,10 +38,8 @@ public class GriefPreventionSupport {
             }
 
             // The player has permission, allow placing the block
-            return true;
-        } else {
-            return true;
         }
+        return true;
     }
 
     public boolean isLoaded() {
