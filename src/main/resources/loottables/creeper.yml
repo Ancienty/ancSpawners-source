@@ -1,0 +1,5 @@
+drops:
+  itemDrops:
+  - GUNPOWDER:65:1-2
+  xpDrops: 5-5
+  xpDropChance: 100

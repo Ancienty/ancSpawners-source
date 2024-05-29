@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="github.azbh111.craftbukkit.1.8" type="repository">
+    <properties maven-id="com.github.azbh111:craftbukkit-1.8.8:R" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/github/azbh111/craftbukkit-1.8.8/R/craftbukkit-1.8.8-R.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

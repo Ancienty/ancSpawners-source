@@ -1,0 +1,6 @@
+drops:
+  itemDrops:
+  - ARROW:62:1-2
+  - BONE:69:1-2
+  xpDrops: 5-5
+  xpDropChance: 100

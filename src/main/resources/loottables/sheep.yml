@@ -1,0 +1,11 @@
+drops:
+  itemDrops:
+  - WHITE_WOOL:81:1-1
+  - MUTTON:100:1-2
+  - GRAY_WOOL:5:1-1
+  - LIGHT_GRAY_WOOL:6:1-1
+  - BLACK_WOOL:5:1-1
+  - BROWN_WOOL:4:1-1
+  - PINK_WOOL:1:1-1
+  xpDrops: 1-3
+  xpDropChance: 100

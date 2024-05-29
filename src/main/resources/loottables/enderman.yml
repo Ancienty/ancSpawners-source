@@ -1,0 +1,5 @@
+drops:
+  itemDrops:
+  - ENDER_PEARL:49:1-1
+  xpDrops: 5-5
+  xpDropChance: 100

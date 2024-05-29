@@ -1,0 +1,6 @@
+drops:
+  itemDrops:
+  - LEATHER:70:1-2
+  - BEEF:100:1-3
+  xpDrops: 1-3
+  xpDropChance: 100
