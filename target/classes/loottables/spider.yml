@@ -1,6 +1,0 @@
-drops:
-  itemDrops:
-  - STRING:67:1-2
-  - SPIDER_EYE:50:1-1
-  xpDrops: 5-5
-  xpDropChance: 100
