@@ -1,6 +1,7 @@
 package com.ancienty.ancspawners.Database;
 
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.Bukkit;
@@ -85,7 +86,7 @@ public class SQLite implements Database {
     @Override
     public void updateStorage(Block block, Material material, int new_amount) {
         if (new Random().nextInt(100) >= 90) {
-            Main.getPlugin().updateSpawnerHologram(block, getHologramName(block));
+            SpawnerHologram_General.updateSpawnerHologram(block, getHologramName(block));
         }
         String query = "INSERT OR REPLACE INTO storage (world, location, item, amount) VALUES (?, ?, ?, ?)";
         DatabaseTask task = new DatabaseTask(query, new Object[]{block.getWorld().getName(), getLocation(block), material.toString(), new_amount}, null);
@@ -97,7 +98,7 @@ public class SQLite implements Database {
     @Override
     public void updateXP(Block block, int amount) {
         if (new Random().nextInt(100) >= 90) {
-            Main.getPlugin().updateSpawnerHologram(block, getHologramName(block));
+            SpawnerHologram_General.updateSpawnerHologram(block, getHologramName(block));
         }
         String query = "INSERT OR REPLACE INTO storage_xp (world, location, xp) VALUES (?, ?, ?)";
         DatabaseTask task = new DatabaseTask(query, new Object[]{block.getWorld().getName(), getLocation(block), amount}, null);

@@ -12,8 +12,6 @@ import com.ancienty.ancspawners.Utils.UpdateChecker;
 import com.ancienty.ancspawners.Utils.Utils;
 import com.ancienty.ancspawners.Versions.Holograms.*;
 import com.cryptomorin.xseries.XMaterial;
-import eu.decentsoftware.holograms.api.DHAPI;
-import eu.decentsoftware.holograms.api.holograms.Hologram;
 import net.brcdev.shopgui.ShopGuiPlusApi;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -80,8 +78,8 @@ public final class Main extends JavaPlugin implements Listener {
         Metrics metrics = new Metrics(this, pluginId);
 
         // Licensing (DISABLED FOR SPIGOTMC)
-        Utils utils = new Utils();
-        utils.checkLicense();
+        /*Utils utils = new Utils();
+        utils.checkLicense();*/
 
         getLogger().info("Creating/reading data files.");
         // Creation of database:
@@ -485,7 +483,7 @@ public final class Main extends JavaPlugin implements Listener {
                                 int new_level = currentLevel + removeAmount;
                                 database.updateLevel(block, new_level);
                                 sendMessage(player, "levelUpSuccessful", new String[]{String.valueOf(removeAmount)});
-                                updateSpawnerHologram(block, database.getHologramName(block));
+                                SpawnerHologram_General.updateSpawnerHologram(block, database.getHologramName(block));
                             } else {
                                 sendMessage(player, "noSpawnersFound", new String[]{});
                             }
@@ -697,35 +695,6 @@ public final class Main extends JavaPlugin implements Listener {
            });
         });
         return return_this;
-    }
-
-    public void updateSpawnerHologram(Block block, String hologram_name) {
-        if (getConfig().getString("config.modules.hologram.enabled").equalsIgnoreCase("true")) {
-            if (DHAPI.getHologram(hologram_name) != null) {
-                Location hologramLocation = DHAPI.getHologram(hologram_name).getLocation();
-                DHAPI.removeHologram(hologram_name);
-
-                List<String> spawnerHolograms = Main.getPlugin().lang.getStringList("lang.hologram");
-                List<String> realHologram = new ArrayList<>();
-                database.getSpawnerType(block).thenAccept(spawnerType -> {
-                   database.getSpawnerOwner(block).thenAccept(spawnerOwner -> {
-                       database.getSpawnerLevel(block).thenAccept(spawner_level -> {
-                           getStorageBar(block).thenAccept(storage_bar -> {
-                               spawnerHolograms.forEach(line -> {
-                                   line = line.replace("{spawner}", getSpawner(spawnerType).getItemMeta().getDisplayName());
-                                   line = line.replace("{level}", String.valueOf(spawner_level));
-                                   line = line.replace("{owner}", spawnerOwner);
-                                   line = line.replace("{storage_bar}", storage_bar);
-                                   line = ChatColor.translateAlternateColorCodes('&', line);
-                                   realHologram.add(line);
-                               });
-                               Hologram hologram = DHAPI.createHologram(hologram_name, hologramLocation, realHologram);
-                           });
-                       });
-                   });
-                });
-            }
-        }
     }
 
     public void createSpawnerHologram(Player player, Block block, World world, Location location) {

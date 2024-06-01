@@ -28,12 +28,11 @@ public class SpawnerHologram_General implements SpawnerHologram {
                         }
 
                         // Location adding
-                        Location location = block.getLocation();
-                        double x = location.getX() > 0 ? Main.getPlugin().getConfig().getDouble("config.modules.hologram.positive-hologram-x") : Main.getPlugin().getConfig().getDouble("config.modules.hologram.negative-hologram-x");
-                        double z = location.getZ() > 0 ? Main.getPlugin().getConfig().getDouble("config.modules.hologram.positive-hologram-z") : Main.getPlugin().getConfig().getDouble("config.modules.hologram.negative-hologram-z");
-                        double y = Main.getPlugin().getConfig().getDouble("config.modules.hologram.hologram-height");
+                        double x = block.getLocation().getX() + 0.5;
+                        double z = block.getLocation().getZ() + 0.5;
+                        double y = block.getLocation().getY() + Main.getPlugin().getConfig().getDouble("config.modules.hologram.hologram-height");
 
-                        location.add(x, y, z);
+                        Location location = new Location(block.getWorld(), x, y, z);
                         if (createHologram) {
 
                             List<String> spawnerHolograms = Main.getPlugin().lang.getStringList("lang.hologram");
@@ -77,12 +76,11 @@ public class SpawnerHologram_General implements SpawnerHologram {
                         }
 
                         // Location adding
-                        Location location = block.getLocation();
-                        double x = location.getX() > 0 ? Main.getPlugin().getConfig().getDouble("config.modules.hologram.positive-hologram-x") : Main.getPlugin().getConfig().getDouble("config.modules.hologram.negative-hologram-x");
-                        double z = location.getZ() > 0 ? Main.getPlugin().getConfig().getDouble("config.modules.hologram.positive-hologram-z") : Main.getPlugin().getConfig().getDouble("config.modules.hologram.negative-hologram-z");
-                        double y = Main.getPlugin().getConfig().getDouble("config.modules.hologram.hologram-height");
+                        double x = block.getLocation().getX() + 0.5;
+                        double z = block.getLocation().getZ() + 0.5;
+                        double y = block.getLocation().getY() + Main.getPlugin().getConfig().getDouble("config.modules.hologram.hologram-height");
 
-                        location.add(x, y, z);
+                        Location location = new Location(block.getWorld(), x, y, z);
                         if (createHologram) {
 
                             List<String> spawnerHolograms = Main.getPlugin().lang.getStringList("lang.hologram");
@@ -104,6 +102,35 @@ public class SpawnerHologram_General implements SpawnerHologram {
                     });
                 });
             });
+        }
+    }
+
+    public static void updateSpawnerHologram(Block block, String hologram_name) {
+        if (Main.getPlugin().getConfig().getString("config.modules.hologram.enabled").equalsIgnoreCase("true") && Main.getPlugin().getServer().getPluginManager().getPlugin("DecentHolograms") != null) {
+            if (DHAPI.getHologram(hologram_name) != null) {
+                Location hologramLocation = DHAPI.getHologram(hologram_name).getLocation();
+                DHAPI.removeHologram(hologram_name);
+
+                List<String> spawnerHolograms = Main.getPlugin().lang.getStringList("lang.hologram");
+                List<String> realHologram = new ArrayList<>();
+                Main.database.getSpawnerType(block).thenAccept(spawnerType -> {
+                    Main.database.getSpawnerOwner(block).thenAccept(spawnerOwner -> {
+                        Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> {
+                            Main.getPlugin().getStorageBar(block).thenAccept(storage_bar -> {
+                                spawnerHolograms.forEach(line -> {
+                                    line = line.replace("{spawner}", Main.getPlugin().getSpawner(spawnerType).getItemMeta().getDisplayName());
+                                    line = line.replace("{level}", String.valueOf(spawner_level));
+                                    line = line.replace("{owner}", spawnerOwner);
+                                    line = line.replace("{storage_bar}", storage_bar);
+                                    line = ChatColor.translateAlternateColorCodes('&', line);
+                                    realHologram.add(line);
+                                });
+                                Hologram hologram = DHAPI.createHologram(hologram_name, hologramLocation, realHologram);
+                            });
+                        });
+                    });
+                });
+            }
         }
     }
 }

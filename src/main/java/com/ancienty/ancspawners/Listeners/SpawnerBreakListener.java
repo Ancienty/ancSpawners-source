@@ -1,6 +1,7 @@
 package com.ancienty.ancspawners.Listeners;
 
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.cryptomorin.xseries.XMaterial;
 import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.utils.MinecraftVersion;
@@ -170,7 +171,7 @@ public class SpawnerBreakListener implements Listener {
                                                  }
 
                                                  Main.getPlugin().sendMessage(player, "brokeAllLevels", new String[]{Main.getPlugin().getSpawner(spawner_type).getItemMeta().getDisplayName()});
-                                                 Main.getPlugin().updateSpawnerHologram(clicked_block, Main.database.getHologramName(clicked_block));
+                                                 SpawnerHologram_General.updateSpawnerHologram(clicked_block, Main.database.getHologramName(clicked_block));
                                              });
                                          } else {
                                              Main.database.getSpawnerType(e.getBlock()).thenAccept(spawner_type -> {
@@ -200,7 +201,7 @@ public class SpawnerBreakListener implements Listener {
                                                  }
 
                                                  Main.getPlugin().sendMessage(player, "brokeWithLevels", new String[]{Main.getPlugin().getSpawner(spawner_type).getItemMeta().getDisplayName()});
-                                                 Main.getPlugin().updateSpawnerHologram(clicked_block, Main.database.getHologramName(clicked_block));
+                                                 SpawnerHologram_General.updateSpawnerHologram(clicked_block, Main.database.getHologramName(clicked_block));
                                              });
                                          }
                                      }

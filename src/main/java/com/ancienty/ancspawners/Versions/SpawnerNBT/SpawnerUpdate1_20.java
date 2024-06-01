@@ -10,6 +10,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.entity.EntityType;
 
+import java.util.Locale;
+
 public class SpawnerUpdate1_20 implements SpawnerUpdate {
 
 
@@ -17,7 +19,7 @@ public class SpawnerUpdate1_20 implements SpawnerUpdate {
     public void spawnerUpdate (Block blocks, Location location, String entityType, String spawnerName, String mode, int delay, int playerRange){
         if (mode.equalsIgnoreCase("entity")) {
             CreatureSpawner block = (CreatureSpawner) blocks.getState();
-            EntityType spawnerType = EntityType.valueOf(Main.getPlugin().getConfig().getString("spawners." + spawnerName + ".spawnerInfo.material"));
+            EntityType spawnerType = EntityType.valueOf(Main.getPlugin().getConfig().getString("spawners." + spawnerName + ".spawnerInfo.material").toUpperCase(Locale.ENGLISH));
             int spawnerDelay = Main.getPlugin().getConfig().getInt("spawners." + spawnerName + ".spawnerInfo.delay");
             int spawnerRange = Main.getPlugin().getConfig().getInt("spawners." + spawnerName + ".spawnerInfo.range");
             block.setSpawnedType(spawnerType);
