@@ -60,22 +60,25 @@ public class MainGUI {
                                                         } else {
                                                             material = Main.getHead(Main.getPlugin().lang.getString("menu." + configKey + ".material").split("head-")[1]);
                                                         }
-                                                        String name = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("menu." + configKey + ".name"));
-                                                        List<String> lore = Main.getPlugin().lang.getStringList("menu." + configKey + ".lore");
-                                                        List<String> real_lore = new ArrayList<>();
-                                                        lore.forEach(text -> {
-                                                            text = text.replace("{type}", type);
-                                                            text = text.replace("{level}", String.valueOf(level));
-                                                            text = text.replace("{owner}", owner);
-                                                            text = text.replace("{amount}", String.valueOf(total_stored));
-                                                            text = text.replace("{multiplier}", String.valueOf(Main.getPlugin().getPlayerMultiplier(player)));
-                                                            text = text.replace("{experience}", String.valueOf(total_xp));
-                                                            text = text.replace("{money}", String.valueOf(money));
-                                                            text = ChatColor.translateAlternateColorCodes('&', text);
-                                                            real_lore.add(text);
-                                                        });
 
-                                                        addItem(slot, material, name, real_lore);
+                                                        if (!((configKey.equalsIgnoreCase("auto-kill") || configKey.equalsIgnoreCase("exp")) && mode.equalsIgnoreCase("item"))) {
+                                                            String name = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("menu." + configKey + ".name"));
+                                                            List<String> lore = Main.getPlugin().lang.getStringList("menu." + configKey + ".lore");
+                                                            List<String> real_lore = new ArrayList<>();
+                                                            lore.forEach(text -> {
+                                                                text = text.replace("{type}", type);
+                                                                text = text.replace("{level}", String.valueOf(level));
+                                                                text = text.replace("{owner}", owner);
+                                                                text = text.replace("{amount}", String.valueOf(total_stored));
+                                                                text = text.replace("{multiplier}", String.valueOf(Main.getPlugin().getPlayerMultiplier(player)));
+                                                                text = text.replace("{experience}", String.valueOf(total_xp));
+                                                                text = text.replace("{money}", String.valueOf(money));
+                                                                text = ChatColor.translateAlternateColorCodes('&', text);
+                                                                real_lore.add(text);
+                                                            });
+
+                                                            addItem(slot, material, name, real_lore);
+                                                        }
                                                     }
                                                 }
                                             }

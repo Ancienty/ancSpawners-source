@@ -138,7 +138,8 @@ public class SpawnerSpawnListener implements Listener {
                     } else if (spawner_mode.equalsIgnoreCase("ITEM")) {
                         e.getEntity().remove();
                         int spawnerLevel = spawner_level;
-                        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawner_type.toUpperCase()).parseMaterial());
+                        String spawned_item = Main.getPlugin().getConfig().getString("spawners." + spawner_type + ".spawnerInfo.material");
+                        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawned_item.toUpperCase()).parseMaterial());
                         int storage = storage_limit;
                         Main.database.getSpawnerStoredByItem(block, itemStack.getType()).thenAccept(previous -> {
                             int newAmount = previous + spawnerLevel;
@@ -157,7 +158,8 @@ public class SpawnerSpawnListener implements Listener {
                     // If the storage module is disabled, and the spawner mode is item.
                     if (spawner_mode.equalsIgnoreCase("ITEM")) {
                         e.getEntity().remove();
-                        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawner_type.toUpperCase()).parseMaterial());
+                        String spawned_item = Main.getPlugin().getConfig().getString("spawners." + spawner_type + ".spawnerInfo.material");
+                        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawned_item.toUpperCase()).parseMaterial());
 
                         ItemMeta meta = itemStack.getItemMeta();
                         String itemName = Main.getPlugin().getConfig().get("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.name") == null ? null : Main.getPlugin().getConfig().getString("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.name");

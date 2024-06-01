@@ -174,7 +174,9 @@ spawners:
 
 itemPrices:
   # Price provider is where the plugin gets prices of materials
-  # from, this currently only supports 'CUSTOM' and 'SHOPGUIPLUS'.
+  # from, this currently only supports 'CUSTOM', 'SHOPGUIPLUS' and 'ECONOMYSHOPGUI'.
+  # For 'ECONOMYSHOPGUI', if no sellable items are found, the plugin will get the
+  # custom prices from below for items.
   priceProvider: CUSTOM
   # These work only if the price provider is 'CUSTOM'.
   ROTTEN_FLESH: 0.4

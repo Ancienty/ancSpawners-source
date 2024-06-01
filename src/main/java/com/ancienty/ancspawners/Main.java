@@ -12,6 +12,10 @@ import com.ancienty.ancspawners.Utils.UpdateChecker;
 import com.ancienty.ancspawners.Utils.Utils;
 import com.ancienty.ancspawners.Versions.Holograms.*;
 import com.cryptomorin.xseries.XMaterial;
+import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
+import me.gypopo.economyshopgui.api.objects.SellPrice;
+import me.gypopo.economyshopgui.util.EcoType;
+import me.gypopo.economyshopgui.util.EconomyType;
 import net.brcdev.shopgui.ShopGuiPlusApi;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -78,8 +82,8 @@ public final class Main extends JavaPlugin implements Listener {
         Metrics metrics = new Metrics(this, pluginId);
 
         // Licensing (DISABLED FOR SPIGOTMC)
-        /*Utils utils = new Utils();
-        utils.checkLicense();*/
+        Utils utils = new Utils();
+        utils.checkLicense();
 
         getLogger().info("Creating/reading data files.");
         // Creation of database:
@@ -232,8 +236,9 @@ public final class Main extends JavaPlugin implements Listener {
                                     }
 
                                     AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO); // Initialize with BigDecimal
+                                    String finalSelect_parameters1 = select_parameters;
                                     items_list.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(item);
+                                        double price = Main.getPlugin().getPriceForItem(Bukkit.getPlayer(UUID.fromString(finalSelect_parameters1.split("---")[1])), item);;
                                         BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
                                         total.updateAndGet(v -> v.add(itemTotal)); // Update with BigDecimal
                                     });
@@ -266,8 +271,9 @@ public final class Main extends JavaPlugin implements Listener {
                                     AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO);
                                     AtomicInteger totalSold = new AtomicInteger();
 
+                                    String finalSelect_parameters = select_parameters;
                                     itemsList.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(item);
+                                        double price = Main.getPlugin().getPriceForItem(Bukkit.getPlayer(UUID.fromString(finalSelect_parameters.split("---")[1])), item);
                                         BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
                                         total.updateAndGet(v -> v.add(itemTotal));
                                         totalSold.addAndGet(amount);
@@ -395,7 +401,7 @@ public final class Main extends JavaPlugin implements Listener {
     }
 
     public List<ItemStack> getLootTable(String entityName) {
-        File loottable = new File(getDataFolder(), File.separator + "loottables" + File.separator + entityName + ".yml");
+        File loottable = new File(getDataFolder(), File.separator + "loottables" + File.separator + entityName.toLowerCase(Locale.ENGLISH) + ".yml");
         if (loottable.exists()) {
             List<ItemStack> returnList = new ArrayList<>();
             Random random = new Random();
@@ -427,7 +433,7 @@ public final class Main extends JavaPlugin implements Listener {
     }
 
     public Integer getLootTableXP(String entityName) {
-        File loottable = new File(getDataFolder(), File.separator + "loottables" + File.separator + entityName + ".yml");
+        File loottable = new File(getDataFolder(), File.separator + "loottables" + File.separator + entityName.toLowerCase(Locale.ENGLISH) + ".yml");
         if (loottable.exists()) {
             YamlConfiguration yamlConfiguration = YamlConfiguration.loadConfiguration(loottable);
             Integer returnInt = null;
@@ -632,7 +638,7 @@ public final class Main extends JavaPlugin implements Listener {
     }
 
 
-    public double getPriceForItem(String item) {
+    public double getPriceForItem(Player player, String item) {
         String priceProvider = getConfig().getString("itemPrices.priceProvider");
         double price = 0;
         if (priceProvider.equalsIgnoreCase("custom")) {
@@ -640,6 +646,14 @@ public final class Main extends JavaPlugin implements Listener {
         } else if (priceProvider.equalsIgnoreCase("shopguiplus")) {
             ItemStack itemStack = XMaterial.valueOf(item).parseItem();
             price = ShopGuiPlusApi.getItemStackPriceSell(itemStack);
+        } else if (priceProvider.equalsIgnoreCase("economyshopgui")) {
+            Optional<SellPrice> optional = EconomyShopGUIHook.getSellPrice(player, new ItemStack(Material.COBBLESTONE));
+            if (optional.isPresent()) {
+                SellPrice sell_price = optional.get();
+                price = sell_price.getPrice(new EcoType(EconomyType.VAULT));
+            } else {
+                price = Main.getPlugin().getConfig().getDouble("itemPrices." + item);
+            }
         }
         return price;
     }
