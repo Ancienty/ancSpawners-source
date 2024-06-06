@@ -12,10 +12,6 @@ import com.ancienty.ancspawners.Utils.UpdateChecker;
 import com.ancienty.ancspawners.Utils.Utils;
 import com.ancienty.ancspawners.Versions.Holograms.*;
 import com.cryptomorin.xseries.XMaterial;
-import me.gypopo.economyshopgui.api.EconomyShopGUIHook;
-import me.gypopo.economyshopgui.api.objects.SellPrice;
-import me.gypopo.economyshopgui.util.EcoType;
-import me.gypopo.economyshopgui.util.EconomyType;
 import net.brcdev.shopgui.ShopGuiPlusApi;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -82,8 +78,8 @@ public final class Main extends JavaPlugin implements Listener {
         Metrics metrics = new Metrics(this, pluginId);
 
         // Licensing (DISABLED FOR SPIGOTMC)
-        Utils utils = new Utils();
-        utils.checkLicense();
+        /*Utils utils = new Utils();
+        utils.checkLicense();*/
 
         getLogger().info("Creating/reading data files.");
         // Creation of database:
@@ -238,7 +234,7 @@ public final class Main extends JavaPlugin implements Listener {
                                     AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO); // Initialize with BigDecimal
                                     String finalSelect_parameters1 = select_parameters;
                                     items_list.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(Bukkit.getPlayer(UUID.fromString(finalSelect_parameters1.split("---")[1])), item);;
+                                        double price = Main.getPlugin().getPriceForItem(Bukkit.getPlayer(UUID.fromString(finalSelect_parameters1.split("--")[1])), item);;
                                         BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
                                         total.updateAndGet(v -> v.add(itemTotal)); // Update with BigDecimal
                                     });
@@ -646,14 +642,6 @@ public final class Main extends JavaPlugin implements Listener {
         } else if (priceProvider.equalsIgnoreCase("shopguiplus")) {
             ItemStack itemStack = XMaterial.valueOf(item).parseItem();
             price = ShopGuiPlusApi.getItemStackPriceSell(itemStack);
-        } else if (priceProvider.equalsIgnoreCase("economyshopgui")) {
-            Optional<SellPrice> optional = EconomyShopGUIHook.getSellPrice(player, new ItemStack(Material.COBBLESTONE));
-            if (optional.isPresent()) {
-                SellPrice sell_price = optional.get();
-                price = sell_price.getPrice(new EcoType(EconomyType.VAULT));
-            } else {
-                price = Main.getPlugin().getConfig().getDouble("itemPrices." + item);
-            }
         }
         return price;
     }
@@ -670,46 +658,77 @@ public final class Main extends JavaPlugin implements Listener {
     }
 
     public CompletableFuture<String> getStorageBar(Block block) {
-        CompletableFuture<String> return_this = new CompletableFuture<>();
-        Main.database.getStorageLimit(block).thenAccept(storage_limit -> {
-           Main.database.getStoredItems(block).thenAccept(stored_items -> {
-               int total_storage_limit = storage_limit * stored_items.size();
-               AtomicInteger total_stored_items = new AtomicInteger();
-               stored_items.forEach(item -> {
-                   Main.database.getSpawnerStoredByItem(block, XMaterial.valueOf(item).parseMaterial()).thenAccept(total_stored_items::addAndGet);
-               });
+        CompletableFuture<String> returnThis = new CompletableFuture<>();
 
-               double division = (double) total_stored_items.get() / total_storage_limit;
-               int amount_of_bars = (int) Math.floor((division * 10));
-               int remainder_bars = 10 - amount_of_bars;
-               StringBuilder builder = new StringBuilder();
+        // Retrieve storage limit and stored items in parallel
+        CompletableFuture<Integer> storageLimitFuture = Main.database.getStorageLimit(block);
+        CompletableFuture<List<String>> storedItemsFuture = Main.database.getStoredItems(block);
 
-               for (int i = 0; i < amount_of_bars; i++) {
-                   builder.append("&a☰");
-               }
-               for (int i = 0; i < remainder_bars; i++) {
-                   builder.append("&f☰");
-               }
-               String return_text = builder.toString();
+        // Combine the results of the parallel operations
+        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(storageLimitFuture, storedItemsFuture);
 
-               if (amount_of_bars == 10) {
-                   return_text = return_text.replace("&a", "&4");
-               } else if (amount_of_bars > 8) {
-                   return_text = return_text.replace("&a", "&c");
-               } else if (amount_of_bars > 6) {
-                   return_text = return_text.replace("&a", "&6");
-               } else if (amount_of_bars > 4) {
-                   return_text = return_text.replace("&a", "&e");
-               }
+        combinedFuture.thenAcceptAsync(voidResult -> {
+            try {
+                int storageLimit = storageLimitFuture.get();
+                List<String> storedItems = storedItemsFuture.get();
 
-               return_text = ChatColor.translateAlternateColorCodes('&', return_text);
+                if (storedItems.isEmpty()) {
+                    // If no items are stored, return an empty storage bar
+                    String returnText = "&f☰☰☰☰☰☰☰☰☰☰";
+                    returnText = ChatColor.translateAlternateColorCodes('&', returnText);
+                    returnThis.complete(returnText);
+                    return;
+                }
 
-               return_this.complete(return_text);
+                int totalStorageLimit = storageLimit * storedItems.size();
+                AtomicInteger totalStoredItems = new AtomicInteger();
 
-           });
+                // Use another CompletableFuture to handle the nested database calls for each item
+                List<CompletableFuture<Void>> itemFutures = new ArrayList<>();
+                for (String item : storedItems) {
+                    CompletableFuture<Void> itemFuture = Main.database.getSpawnerStoredByItem(block, XMaterial.valueOf(item).parseMaterial())
+                            .thenAccept(totalStoredItems::addAndGet);
+                    itemFutures.add(itemFuture);
+                }
+
+                // Wait for all item futures to complete
+                CompletableFuture<Void> allItemsFuture = CompletableFuture.allOf(itemFutures.toArray(new CompletableFuture[0]));
+                allItemsFuture.thenAcceptAsync(itemVoidResult -> {
+                    double division = (double) totalStoredItems.get() / totalStorageLimit;
+                    int amountOfBars = (int) Math.floor((division * 10));
+                    int remainderBars = 10 - amountOfBars;
+                    StringBuilder builder = new StringBuilder();
+
+                    for (int i = 0; i < amountOfBars; i++) {
+                        builder.append("&a☰");
+                    }
+                    for (int i = 0; i < remainderBars; i++) {
+                        builder.append("&f☰");
+                    }
+                    String returnText = builder.toString();
+
+                    if (amountOfBars == 10) {
+                        returnText = returnText.replace("&a", "&4");
+                    } else if (amountOfBars > 8) {
+                        returnText = returnText.replace("&a", "&c");
+                    } else if (amountOfBars > 6) {
+                        returnText = returnText.replace("&a", "&6");
+                    } else if (amountOfBars > 4) {
+                        returnText = returnText.replace("&a", "&e");
+                    }
+
+                    returnText = ChatColor.translateAlternateColorCodes('&', returnText);
+                    returnThis.complete(returnText);
+                });
+            } catch (Exception e) {
+                returnThis.completeExceptionally(e);
+            }
         });
-        return return_this;
+
+        return returnThis;
     }
+
+
 
     public void createSpawnerHologram(Player player, Block block, World world, Location location) {
         SpawnerHologram spawnerHologram;

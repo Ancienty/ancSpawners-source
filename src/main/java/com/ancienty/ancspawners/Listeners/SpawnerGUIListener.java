@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.ancienty.ancspawners.Listeners.SpawnerSpawnListener.spawner_auto_kill_check;
+import static com.ancienty.ancspawners.Listeners.SpawnerSpawnListener.spawnerAutoKillCheck;
 
 public class SpawnerGUIListener implements Listener {
 
@@ -99,7 +99,7 @@ public class SpawnerGUIListener implements Listener {
                         new FriendsGUI(player, block);
                     } else if (e.getRawSlot() == autokill_slot) {
                         e.getView().getPlayer().closeInventory();
-                        spawner_auto_kill_check.remove(block);
+                        spawnerAutoKillCheck.remove(block);
                         Main.database.getSpawnerMode(block).thenAccept(spawner_mode -> {
                             if (spawner_mode.equalsIgnoreCase("entity")) {
                                 Main.database.toggleAutoKill(block);

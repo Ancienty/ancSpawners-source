@@ -4,9 +4,7 @@ import com.ancienty.ancspawners.Main;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
@@ -25,15 +23,24 @@ public class SQLite implements Database {
         if (dataSource == null) {
             HikariConfig config = new HikariConfig();
             config.setJdbcUrl("jdbc:sqlite:" + Main.getPlugin().getDataFolder() + File.separator + "database.db");
-            // Focus on handling bursts, but prevent excessive open connections
-            config.setMaximumPoolSize(8);    // Keep the pool smaller
-            config.setMinimumIdle(3);         // Maintain a few idle connections
+
+            // Connection Pool Settings
+            config.setMaximumPoolSize(15);    // Increase if you expect higher load
+            config.setMinimumIdle(4);         // Maintain a few idle connections
             config.setIdleTimeout(300000);    // 5 minutes - Close idle connections a bit quicker
-            config.setConnectionTimeout(20000); // Slightly lower connection wait time
+            config.setConnectionTimeout(20000); // Lower connection wait time to 20 seconds
             config.setMaxLifetime(1800000);   // 30 minutes - Standard
+
+            // Leak Detection
+            config.setLeakDetectionThreshold(3000); // 3 seconds - Detect connections not closed within this time
+
+            // Initialization Fail Timeout
+            config.setInitializationFailTimeout(30000); // 30 seconds - Fail fast if database is unreachable
+
             dataSource = new HikariDataSource(config);
         }
     }
+
 
     public SQLite() {
         initializeHikariCP();
@@ -320,6 +327,23 @@ public class SQLite implements Database {
     public void placeSpawner(Player player, Block block, String mode, String type) {
         String query = "INSERT INTO spawners (world, location, uuid, mode, type, level, autokill) VALUES (?, ?, ?, ?, ?, ?, ?)";
         DatabaseTask task = new DatabaseTask(query, new Object[]{block.getWorld().getName(), getLocation(block), player.getUniqueId().toString(), mode, type, 1, false}, null);
+        operations_queue.add(task);
+        notifyTask();
+    }
+
+    @Override
+    public CompletableFuture<Boolean> doesLocationHaveSpawner(World world, Location location) {
+        String query = "SELECT * FROM spawners WHERE world = ? AND location = ?";
+        DatabaseTask task = new DatabaseTask(query, new Object[]{world, location}, "owner", true);
+        operations_queue.add(task);
+        notifyTask();
+        return task.getReturnBoolean();
+    }
+
+    @Override
+    public void deleteSpawner(World world, Location location) {
+        String query = "DELETE FROM spawners WHERE world = ? AND location = ?";
+        DatabaseTask task = new DatabaseTask(query, new Object[]{world, location}, null);
         operations_queue.add(task);
         notifyTask();
     }

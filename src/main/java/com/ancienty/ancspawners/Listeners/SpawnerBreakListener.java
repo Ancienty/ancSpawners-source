@@ -4,6 +4,7 @@ import com.ancienty.ancspawners.Main;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.cryptomorin.xseries.XMaterial;
 import de.tr7zw.nbtapi.NBT;
+import de.tr7zw.nbtapi.iface.ReadableNBT;
 import de.tr7zw.nbtapi.utils.MinecraftVersion;
 import eu.decentsoftware.holograms.api.DHAPI;
 import org.bukkit.Bukkit;
@@ -23,276 +24,278 @@ import java.util.concurrent.ExecutionException;
 
 public class SpawnerBreakListener implements Listener {
 
-    public int getDropChance(Player player) {
-        int drop_chance;
-        boolean enabled = Main.getPlugin().getConfig().get("config.modules.spawner-drop-chance.default") != null;
-        if (enabled) {
-            drop_chance = Main.getPlugin().getConfig().getInt("config.modules.spawner-drop-chance.default");
-            for (String permission : Main.getPlugin().getConfig().getConfigurationSection("config.modules.spawner-drop-chance.permissions").getKeys(false)) {
+    private int getDropChance(Player player) {
+        FileConfiguration config = Main.getPlugin().getConfig();
+        int dropChance = config.getInt("config.modules.spawner-drop-chance.default", 100);
+
+        if (config.isConfigurationSection("config.modules.spawner-drop-chance.permissions")) {
+            for (String permission : config.getConfigurationSection("config.modules.spawner-drop-chance.permissions").getKeys(false)) {
                 if (Main.getPermissions().has(player, permission)) {
-                    drop_chance = Main.getPlugin().getConfig().getInt("config.modules.spawner-drop-chance.permissions." + permission);
+                    dropChance = config.getInt("config.modules.spawner-drop-chance.permissions." + permission, dropChance);
                 }
             }
-        } else {
-            drop_chance = 100;
         }
-        return drop_chance;
+        return dropChance;
     }
 
-    public boolean playerSilkTouch(Player player) {
-        // Returns true if the player can break it, false otherwise.
-        boolean can_break;
+    private boolean playerSilkTouch(Player player) {
         FileConfiguration config = Main.getPlugin().getConfig();
         if (config.getBoolean("config.modules.silk-touch.enabled")) {
-            if (player.getInventory().getItemInMainHand().hasItemMeta() && player.getInventory().getItemInMainHand().getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)) {
-                can_break = true;
-            } else {
-                can_break = Main.getPermissions().has(player, config.getString("config.modules.silk-touch.exempt"));
+            ItemStack item = player.getInventory().getItemInMainHand();
+            if (item.hasItemMeta() && item.getItemMeta().hasEnchant(Enchantment.SILK_TOUCH)) {
+                return true;
             }
-        } else {
-            can_break = true;
+            return Main.getPermissions().has(player, config.getString("config.modules.silk-touch.exempt"));
         }
-        return can_break;
+        return true;
     }
 
-    public boolean playerHasBreakAllPermission(Player player) {
-        // Returns true if a player has bypass permission to break all spawners regardless of ownership, false otherwise.
+    private boolean playerHasBreakAllPermission(Player player) {
         return Main.getPermissions().has(player, Main.getPlugin().getConfig().getString("config.modules.break-spawners.permission"));
     }
 
+    private void handleSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
+        Main.database.spawnerHasOwner(clickedBlock).thenAccept(spawnerHasOwner -> {
+            if (spawnerHasOwner) {
+                try {
+                    handleOwnedSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
+                } catch (ExecutionException | InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+            } else {
+                handleVanillaSpawnerBreak(e, clickedBlock, spawnerDropChance);
+            }
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error handling spawner break: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        });
+    }
+
+    private void handleOwnedSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) throws ExecutionException, InterruptedException {
+        Main.database.getSpawnerOwnerUuid(clickedBlock).thenAccept(ownerUuid -> {
+            if (ownerUuid.equalsIgnoreCase(player.getUniqueId().toString()) || playerHasBreakAllPermission(player)) {
+                processSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
+            } else {
+                handleNotOwner(e, clickedBlock, player, hologramsEnabled);
+            }
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error retrieving spawner owner UUID: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        }).handle((result, exception) -> {
+            if (exception != null) {
+                if (exception instanceof ExecutionException || exception instanceof InterruptedException) {
+                    Main.getPlugin().getLogger().severe("Error handling spawner break: " + exception.getMessage());
+                    e.setCancelled(true);
+                }
+            }
+            return result;
+        });
+    }
+
+
+    private void processSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
+        e.setCancelled(true);
+
+        if (!playerSilkTouch(player)) {
+            handleNoSilkTouch(e, clickedBlock, player);
+            return;
+        }
+
+        Main.database.getSpawnerLevel(clickedBlock).thenAccept(spawnerLevel -> {
+            if (spawnerLevel == 1) {
+                handleLevel1SpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
+            } else if (spawnerLevel > 1) {
+                handleHigherLevelSpawnerBreak(e, clickedBlock, player, spawnerLevel, hologramsEnabled, spawnerDropChance);
+            }
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error retrieving spawner level: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        });
+    }
+
+    private void handleNoSilkTouch(BlockBreakEvent e, Block clickedBlock, Player player) {
+        if (Main.getPlugin().getConfig().getBoolean("config.modules.silk-touch.block")) {
+            Main.getPlugin().sendMessage(player, "silkTouchRequired", new String[]{});
+        } else {
+            e.getBlock().setType(Material.AIR);
+            Main.database.breakSpawner(player, clickedBlock);
+            Main.getPlugin().sendMessage(player, "noSilkTouchSpawnerLost", new String[]{});
+        }
+    }
+
+    private void handleLevel1SpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
+        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+            ItemStack spawner = Main.getPlugin().getSpawner(spawnerType);
+            removeHologramIfExists(hologramsEnabled, clickedBlock);
+            clickedBlock.setType(Material.AIR);
+            Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> Main.database.breakSpawner(player, clickedBlock), 1);
+            dropSpawnerOrAddToInventory(clickedBlock, player, spawner, spawnerDropChance);
+            Main.getPlugin().sendMessage(player, "brokeSpawner", new String[]{spawner.getItemMeta().getDisplayName()});
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error handling level 1 spawner break: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        });
+    }
+
+    private void handleHigherLevelSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, int spawnerLevel, boolean hologramsEnabled, int spawnerDropChance) {
+        if (player.isSneaking()) {
+            handleSneakingHigherLevelSpawnerBreak(e, clickedBlock, player, spawnerLevel, hologramsEnabled, spawnerDropChance);
+        } else {
+            handleNormalHigherLevelSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
+        }
+    }
+
+    private void handleSneakingHigherLevelSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, int spawnerLevel, boolean hologramsEnabled, int spawnerDropChance) {
+        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+            ItemStack spawner = Main.getPlugin().getSpawner(spawnerType);
+            assert spawner != null;
+            spawner.setAmount(1);
+            Main.database.setSpawnerLevelTo1(player, clickedBlock);
+            clickedBlock.getDrops().clear();
+
+            dropMultipleSpawners(clickedBlock, player, spawner, spawnerLevel - 1, spawnerDropChance);
+            Main.getPlugin().sendMessage(player, "brokeAllLevels", new String[]{spawner.getItemMeta().getDisplayName()});
+            SpawnerHologram_General.updateSpawnerHologram(clickedBlock, Main.database.getHologramName(clickedBlock));
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error handling sneaking higher level spawner break: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        });
+    }
+
+    private void handleNormalHigherLevelSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
+        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+            ItemStack spawner = Main.getPlugin().getSpawner(spawnerType);
+            Main.database.reduceLevelBy1(player, clickedBlock);
+            clickedBlock.getDrops().clear();
+
+            dropSpawnerOrAddToInventory(clickedBlock, player, spawner, spawnerDropChance);
+            Main.getPlugin().sendMessage(player, "brokeWithLevels", new String[]{spawner.getItemMeta().getDisplayName()});
+            SpawnerHologram_General.updateSpawnerHologram(clickedBlock, Main.database.getHologramName(clickedBlock));
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error handling normal higher level spawner break: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        });
+    }
+
+    private void handleNotOwner(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled) {
+        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+            Main.getPlugin().sendMessage(player, "notTheOwner", new String[]{Main.getPlugin().getSpawner(spawnerType).getItemMeta().getDisplayName()});
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().severe("Error handling not owner: " + ex.getMessage());
+            e.setCancelled(true);
+            return null;
+        });
+    }
+
+    private void handleVanillaSpawnerBreak(BlockBreakEvent e, Block clickedBlock, int spawnerDropChance) {
+        if (Main.getPlugin().getConfig().getString("config.modules.vanilla-spawner-support.enabled").equalsIgnoreCase("true")) {
+            e.setCancelled(true);
+            CreatureSpawner spawner = (CreatureSpawner) e.getBlock().getState();
+            String entity = getSpawnerEntity(spawner);
+
+            if (entity != null) {
+                entity = entity.toUpperCase();
+                ItemStack itemStack = Main.getPlugin().getSpawnerByEntity(entity);
+                if (itemStack != null) {
+                    clickedBlock.setType(Material.AIR);
+                    dropSpawnerOrAddToInventory(clickedBlock, e.getPlayer(), itemStack, spawnerDropChance);
+                    Main.getPlugin().sendMessage(e.getPlayer(), "vanillaSpawnerBroken", new String[]{});
+                } else {
+                    Main.getPlugin().sendMessage(e.getPlayer(), "vanillaSpawnerNotConfigured", new String[]{});
+                }
+            } else {
+                Main.getPlugin().sendMessage(e.getPlayer(), "vanillaSpawnerEntityNotFound", new String[]{});
+            }
+        }
+    }
+
+    private String getSpawnerEntity(CreatureSpawner spawner) {
+        if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_12_R1)) {
+            return spawner.getSpawnedType().toString();
+        } else {
+            final String[] entityFromNbt = new String[1];
+            NBT.get(spawner.getBlock().getState(), nbt -> {
+                entityFromNbt[0] = nbt.getString("EntityId");
+                return entityFromNbt[0];
+            });
+            return entityFromNbt[0];
+        }
+    }
+
+
+    private void removeHologramIfExists(boolean hologramsEnabled, Block block) {
+        if (hologramsEnabled) {
+            String hologramName = Main.database.getHologramName(block);
+            if (DHAPI.getHologram(hologramName) != null) {
+                DHAPI.removeHologram(hologramName);
+            }
+        }
+    }
+
+    private void dropSpawnerOrAddToInventory(Block clickedBlock, Player player, ItemStack spawner, int spawnerDropChance) {
+        Random random = new Random();
+        boolean autopickup = Main.getPlugin().getConfig().getBoolean("config.modules.auto-pickup.enabled");
+        boolean hasAutoPickupPerm = Main.getPermissions().has(player, Main.getPlugin().getConfig().getString("config.modules.auto-pickup.permission"));
+
+        if (spawnerDropChance >= random.nextInt(101)) {
+            if (autopickup && hasAutoPickupPerm) {
+                if (player.getInventory().firstEmpty() != -1) {
+                    player.getInventory().addItem(spawner);
+                } else {
+                    clickedBlock.getLocation().getWorld().dropItemNaturally(clickedBlock.getLocation(), spawner);
+                }
+            } else {
+                clickedBlock.getLocation().getWorld().dropItemNaturally(clickedBlock.getLocation(), spawner);
+            }
+        }
+    }
+
+    private void dropMultipleSpawners(Block clickedBlock, Player player, ItemStack spawner, int amountToDrop, int spawnerDropChance) {
+        Random random = new Random();
+        boolean autopickup = Main.getPlugin().getConfig().getBoolean("config.modules.auto-pickup.enabled");
+        boolean hasAutoPickupPerm = Main.getPermissions().has(player, Main.getPlugin().getConfig().getString("config.modules.auto-pickup.permission"));
+
+        while (amountToDrop > 0) {
+            ItemStack spawnerToDrop = spawner.clone();
+            if (amountToDrop > 64) {
+                spawnerToDrop.setAmount(64);
+                amountToDrop -= 64;
+            } else {
+                spawnerToDrop.setAmount(amountToDrop);
+                amountToDrop = 0;
+            }
+
+            if (spawnerDropChance >= random.nextInt(101)) {
+                if (autopickup && hasAutoPickupPerm) {
+                    if (player.getInventory().firstEmpty() != -1) {
+                        player.getInventory().addItem(spawnerToDrop);
+                    } else {
+                        clickedBlock.getLocation().getWorld().dropItemNaturally(clickedBlock.getLocation(), spawnerToDrop);
+                    }
+                } else {
+                    clickedBlock.getLocation().getWorld().dropItemNaturally(clickedBlock.getLocation(), spawnerToDrop);
+                }
+            }
+        }
+    }
 
     @EventHandler
     public void onSpawnerBreakEvent(BlockBreakEvent e) {
-        if (!e.isCancelled()) {
-            int spawner_drop_chance = getDropChance(e.getPlayer());
-            if (e.getBlock().getType() == XMaterial.SPAWNER.parseMaterial()) {
-                Block clicked_block = e.getBlock();
-                Player player = e.getPlayer();
-                boolean holograms_enabled = Main.getPlugin().getConfig().getBoolean("config.modules.hologram.enabled");
-                Main.database.spawnerHasOwner(e.getBlock()).thenAccept(boolean1 -> {
-                   if (boolean1) { // If spawner has an owner.
-                       try {
-                           Main.database.getSpawnerOwnerUuid(clicked_block).thenAccept(owneruuid -> {
-                             if (owneruuid.equalsIgnoreCase(player.getUniqueId().toString()) || playerHasBreakAllPermission(player)) {
-                                 e.setCancelled(true);
-                                 if (!playerSilkTouch(player)) {
-                                     if (Main.getPlugin().getConfig().getBoolean("config.modules.silk-touch.block")) {
-                                         Main.getPlugin().sendMessage(player, "silkTouchRequired", new String[]{});
-                                     } else {
-                                         e.getBlock().setType(Material.AIR);
-                                         Main.database.breakSpawner(player, clicked_block);
-                                         Main.getPlugin().sendMessage(player, "noSilkTouchSpawnerLost", new String[]{});
-                                     }
-                                     return;
-                                 }
-
-                                 Main.database.getSpawnerLevel(clicked_block).thenAccept(spawner_level -> {
-                                     if (spawner_level == 1) {
-                                         Main.database.getSpawnerType(clicked_block).thenAccept(spawner_type -> {
-                                             ItemStack spawner = Main.getPlugin().getSpawner(spawner_type);
-                                             String hologram_name = Main.database.getHologramName(e.getBlock());
-                                             if (holograms_enabled) {
-                                                 if (DHAPI.getHologram(hologram_name) != null) {
-                                                     DHAPI.removeHologram(hologram_name);
-                                                 }
-                                             }
-
-                                             clicked_block.setType(Material.AIR);
-                                             Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-                                                 Main.database.breakSpawner(player, clicked_block);
-                                             }, 1);
-                                             clicked_block.getDrops().clear();
-                                             boolean autopickup = Main.getPlugin().getConfig().getBoolean("config.modules.auto-pickup.enabled");
-                                             boolean hasautopickupperm = Main.getPermissions().has(player, Main.getPlugin().getConfig().getString("config.modules.auto-pickup.permission"));
-                                             if (autopickup && hasautopickupperm) {
-                                                 if (player.getInventory().firstEmpty() != -1) {
-                                                     Random random = new Random();
-                                                     if (spawner_drop_chance >= random.nextInt(101)) {
-                                                         player.getInventory().addItem(spawner);
-                                                     }
-                                                 } else {
-                                                     Random random = new Random();
-                                                     if (spawner_drop_chance >= random.nextInt(101)) {
-                                                         clicked_block.getLocation().getWorld().dropItemNaturally(e.getBlock().getLocation(), spawner);
-                                                     }
-                                                 }
-                                             } else {
-                                                 Random random = new Random();
-                                                 if (spawner_drop_chance >= random.nextInt(101)) {
-                                                     clicked_block.getLocation().getWorld().dropItemNaturally(e.getBlock().getLocation(), spawner);
-                                                 }
-                                             }
-
-                                             Main.getPlugin().sendMessage(player, "brokeSpawner", new String[]{Main.getPlugin().getSpawner(spawner_type).getItemMeta().getDisplayName()});
-
-                                         });
-                                     } else if (spawner_level > 1) {
-                                         if (player.isSneaking()) {
-
-                                             final int[] totalLevelToDrop = {spawner_level - 1};
-                                             Main.database.getSpawnerType(clicked_block).thenAccept(spawner_type -> {
-
-                                                 ItemStack spawner = Main.getPlugin().getSpawner(spawner_type);
-                                                 assert spawner != null;
-                                                 spawner.setAmount(1);
-
-                                                 Main.database.setSpawnerLevelTo1(player, clicked_block);
-                                                 clicked_block.getDrops().clear();
-
-                                                 while (totalLevelToDrop[0] > 0) {
-                                                     ItemStack spawnerToDrop = spawner.clone();
-                                                     if (totalLevelToDrop[0] > 64) {
-                                                         spawnerToDrop.setAmount(64);
-                                                         totalLevelToDrop[0] -= 64;
-                                                     } else {
-                                                         spawnerToDrop.setAmount(totalLevelToDrop[0]);
-                                                         totalLevelToDrop[0] -= totalLevelToDrop[0];
-                                                     }
-                                                     boolean autopickup = Main.getPlugin().getConfig().getBoolean("config.modules.auto-pickup.enabled");
-                                                     boolean hasautopickupperm = Main.getPermissions().has(e.getPlayer(), Main.getPlugin().getConfig().getString("config.modules.auto-pickup.permission"));
-                                                     if (autopickup && hasautopickupperm) {
-                                                         if (player.getInventory().firstEmpty() != -1) {
-                                                             Random random = new Random();
-                                                             if (spawner_drop_chance >= random.nextInt(101)) {
-                                                                 player.getInventory().addItem(spawnerToDrop);
-                                                             }
-                                                         } else {
-                                                             Random random = new Random();
-                                                             if (spawner_drop_chance >= random.nextInt(101)) {
-                                                                 clicked_block.getLocation().getWorld().dropItemNaturally(e.getBlock().getLocation(), spawnerToDrop);
-                                                             }
-                                                         }
-                                                     } else {
-                                                         Random random = new Random();
-                                                         if (spawner_drop_chance >= random.nextInt(101)) {
-                                                             clicked_block.getLocation().getWorld().dropItemNaturally(e.getBlock().getLocation(), spawnerToDrop);
-                                                         }
-                                                     }
-                                                 }
-
-                                                 Main.getPlugin().sendMessage(player, "brokeAllLevels", new String[]{Main.getPlugin().getSpawner(spawner_type).getItemMeta().getDisplayName()});
-                                                 SpawnerHologram_General.updateSpawnerHologram(clicked_block, Main.database.getHologramName(clicked_block));
-                                             });
-                                         } else {
-                                             Main.database.getSpawnerType(e.getBlock()).thenAccept(spawner_type -> {
-                                                 ItemStack spawner = Main.getPlugin().getSpawner(spawner_type);
-                                                 Main.database.reduceLevelBy1(e.getPlayer(), e.getBlock());
-                                                 clicked_block.getDrops().clear();
-
-                                                 boolean autopickup = Main.getPlugin().getConfig().getBoolean("config.modules.auto-pickup.enabled");
-                                                 boolean hasautopickupperm = Main.getPermissions().has(e.getPlayer(), Main.getPlugin().getConfig().getString("config.modules.auto-pickup.permission"));
-                                                 if (autopickup && hasautopickupperm) {
-                                                     if (player.getInventory().firstEmpty() != -1) {
-                                                         Random random = new Random();
-                                                         if (spawner_drop_chance >= random.nextInt(101)) {
-                                                             player.getInventory().addItem(spawner);
-                                                         }
-                                                     } else {
-                                                         Random random = new Random();
-                                                         if (spawner_drop_chance >= random.nextInt(101)) {
-                                                             clicked_block.getLocation().getWorld().dropItemNaturally(clicked_block.getLocation(), spawner);
-                                                         }
-                                                     }
-                                                 } else {
-                                                     Random random = new Random();
-                                                     if (spawner_drop_chance >= random.nextInt(101)) {
-                                                         clicked_block.getLocation().getWorld().dropItemNaturally(clicked_block.getLocation(), spawner);
-                                                     }
-                                                 }
-
-                                                 Main.getPlugin().sendMessage(player, "brokeWithLevels", new String[]{Main.getPlugin().getSpawner(spawner_type).getItemMeta().getDisplayName()});
-                                                 SpawnerHologram_General.updateSpawnerHologram(clicked_block, Main.database.getHologramName(clicked_block));
-                                             });
-                                         }
-                                     }
-                                 });
-                             } else {
-                                 boolean hasBypassPermission = Main.getPermissions().has(e.getPlayer(), "ancspawners.bypass");
-                                 e.setCancelled(true);
-                                 if (hasBypassPermission) {
-                                     Main.database.getSpawnerLevel(e.getBlock()).thenAccept(spawnerLevel -> {
-                                         Main.database.getSpawnerType(e.getBlock()).thenAccept(spawnerTypeInData -> {
-                                             String spawnerDisplayName = Main.getPlugin().getSpawnerByEntity(spawnerTypeInData).getItemMeta().getDisplayName();
-                                             try {
-                                                 Main.database.getSpawnerOwnerUuid(e.getBlock()).thenAccept(owner -> {
-
-                                                     String hologramName = Main.database.getHologramName(e.getBlock());
-
-                                                     if (holograms_enabled) {
-                                                         if (DHAPI.getHologram(hologramName) != null) {
-                                                             DHAPI.removeHologram(hologramName);
-                                                         }
-                                                     }
-
-                                                     e.getBlock().setType(Material.AIR);
-
-                                                     Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-                                                         Main.database.breakSpawner(e.getPlayer(), e.getBlock());
-                                                     }, 1);
-
-                                                     Main.getPlugin().sendMessage(e.getPlayer(), "bypassBrokeSpawner", new String[]{String.valueOf(spawnerLevel), spawnerDisplayName, owner});
-                                                 });
-                                             } catch (ExecutionException | InterruptedException ex) {
-                                                 throw new RuntimeException(ex);
-                                             }
-                                         });
-                                     });
-                                 } else {
-                                     // NOT THE OWNER IS BELOW.
-                                     Main.database.getSpawnerType(e.getBlock()).thenAccept(spawner_type -> {
-                                         Main.getPlugin().sendMessage(e.getPlayer(), "notTheOwner", new String[]{Main.getPlugin().getSpawner(spawner_type).getItemMeta().getDisplayName()});
-                                     });
-                                 }
-                             }
-                           });
-                       } catch (ExecutionException | InterruptedException ex) {
-                           throw new RuntimeException(ex);
-                       }
-                   } else {
-                       if (Main.getPlugin().getConfig().getString("config.modules.vanilla-spawner-support.enabled").equalsIgnoreCase("true")) {
-                           e.setCancelled(true);
-                           // This means the spawner was not placed after ancSpawners was installed, most likely a vanilla spawner.
-
-                           CreatureSpawner spawner = (CreatureSpawner) e.getBlock().getState();
-                           String entity;
-                           if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_12_R1)) {
-                               entity = spawner.getSpawnedType().toString();
-                           } else {
-                               final String[] entityFromNbt = new String[1];
-                               NBT.get(spawner, nbt -> {
-                                   entityFromNbt[0] = nbt.getString("EntityId");
-                               });
-                               entity = entityFromNbt[0];
-                           }
-
-                           // Search the config to find the equivalent spawner.
-
-                           if (entity != null) {
-                               entity = entity.toUpperCase();
-                               ItemStack itemStack = Main.getPlugin().getSpawnerByEntity(entity);
-                               if (itemStack != null) {
-                                   e.getBlock().setType(Material.AIR);
-                                   Random random = new Random();
-                                   if (spawner_drop_chance >= random.nextInt(101)) {
-                                       e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation(), itemStack);
-                                   }
-                                   // SEND MESSAGE - Vanilla spawner has been broken.
-                                   Main.getPlugin().sendMessage(e.getPlayer(), "vanillaSpawnerBroken", new String[]{});
-
-                               } else {
-                                   // SEND MESSAGE - This vanilla spawner has not been configured yet.
-                                   Main.getPlugin().sendMessage(e.getPlayer(), "vanillaSpawnerNotConfigured", new String[]{});
-
-                               }
-                           } else {
-                               // SEND MESSAGE - This spawner seems to be broken.
-                               Main.getPlugin().sendMessage(e.getPlayer(), "vanillaSpawnerEntityNotFound", new String[]{});
-
-                           }
-                       }
-                   }
-                });
-            }
+        if (e.isCancelled() || e.getBlock().getType() != XMaterial.SPAWNER.parseMaterial()) {
+            return;
         }
+
+        Block clickedBlock = e.getBlock();
+        Player player = e.getPlayer();
+        boolean hologramsEnabled = Main.getPlugin().getConfig().getBoolean("config.modules.hologram.enabled");
+        int spawnerDropChance = getDropChance(player);
+
+        handleSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
     }
 }

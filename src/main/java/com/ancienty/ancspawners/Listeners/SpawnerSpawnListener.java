@@ -8,214 +8,240 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.*;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class SpawnerSpawnListener implements Listener {
 
-    HashMap<UUID, Block> entityLinkToSpawners = new HashMap<>();
-    public static HashMap<Block, Boolean> spawner_auto_kill_check = new HashMap<>();
+    private final HashMap<UUID, Block> entityLinkToSpawners = new HashMap<>();
+    public static final HashMap<Block, Boolean> spawnerAutoKillCheck = new HashMap<>();
 
-    public CompletableFuture<HashMap<Material, Integer>> getMobDrops(Block spawner, String entity_name) {
-        CompletableFuture<HashMap<Material, Integer>> return_this = new CompletableFuture<>();
-        Main.database.getSpawnerLevel(spawner).thenAccept(spawner_level -> {
-
+    public CompletableFuture<HashMap<Material, Integer>> getMobDrops(Block spawner, String entityName) {
+        return Main.database.getSpawnerLevel(spawner).thenApply(spawnerLevel -> {
             HashMap<Material, Integer> drops = new HashMap<>();
-            if (Main.getPlugin().getLootTable(entity_name) != null) {
-                List<ItemStack> loottable = Main.getPlugin().getLootTable(entity_name);
-                assert loottable != null;
-                for (ItemStack item : loottable) {
-                    drops.put(item.getType(), item.getAmount() * spawner_level);
+            List<ItemStack> lootTable = Main.getPlugin().getLootTable(entityName);
+            if (lootTable != null) {
+                for (ItemStack item : lootTable) {
+                    drops.put(item.getType(), item.getAmount() * spawnerLevel);
                 }
             }
-            return_this.complete(drops);
-
+            return drops;
         });
-        return return_this;
     }
 
-    public void dropItems(Block block, World world, Location location, String entity_name) {
-        getMobDrops(block, entity_name).thenAccept(given_drops -> {
-            given_drops.forEach((material, integer) -> {
+    public void dropItems(Block block, World world, Location location, String entityName) {
+        getMobDrops(block, entityName).thenAccept(givenDrops -> {
+            givenDrops.forEach((material, amount) -> {
                 ItemStack itemStack = new ItemStack(material);
-                while (integer >= 64) {
+                while (amount >= 64) {
                     itemStack.setAmount(64);
-                    integer -= 64;
+                    amount -= 64;
                     world.dropItemNaturally(location, itemStack);
                 }
-
-                if (integer > 0) {
-                    itemStack.setAmount(integer);
+                if (amount > 0) {
+                    itemStack.setAmount(amount);
                     world.dropItemNaturally(location, itemStack);
                 }
             });
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().log(Level.SEVERE, "Error dropping items", ex);
+            return null;
         });
     }
 
-    public void dropXP(Block block, World world, Location location, String entity_name) {
-        int drop_xp = Main.getPlugin().getLootTableXP(entity_name);
-        Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> {
-            world.spawn(location, ExperienceOrb.class, x -> x.setExperience(drop_xp * spawner_level));
+    public void dropXP(Block block, World world, Location location, String entityName) {
+        int dropXP = Main.getPlugin().getLootTableXP(entityName.toLowerCase(Locale.ENGLISH));
+        Main.database.getSpawnerLevel(block).thenAccept(spawnerLevel -> {
+            world.spawn(location, ExperienceOrb.class, x -> x.setExperience(dropXP * spawnerLevel));
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().log(Level.SEVERE, "Error dropping XP", ex);
+            return null;
         });
     }
 
-    public void addDropsToStorage(Block block, String entity_name) {
-        getMobDrops(block, entity_name).thenAccept(mob_drops -> {
-            Main.database.getStorageLimit(block).thenAccept(storage_limit -> {
-                Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> {
-                    mob_drops.forEach((material, amount) -> {
-                       Main.database.getSpawnerStoredByItem(block, material).thenAccept(previous_stored -> {
-                          int new_amount = previous_stored + amount;
-                          if (new_amount >= storage_limit) {
-                              new_amount = storage_limit;
-                          }
-                          Main.database.updateStorage(block, material, new_amount);
-                      });
-                  });
-              });
-           });
-        });
-    }
-
-    public void addXPToStorage(Block block, int add_amount) {
-        Main.database.getStoredXP(block).thenAccept(previous_xp -> {
-            Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> {
-                int add_this = previous_xp + (add_amount * spawner_level);
-                if (add_this > Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
-                    add_this = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
-                }
-                Main.database.updateXP(block, add_this);
+    public void addDropsToStorage(Block block, String entityName) {
+        getMobDrops(block, entityName).thenAccept(mobDrops -> {
+            CompletableFuture<Integer> storageLimitFuture = Main.database.getStorageLimit(block);
+            CompletableFuture<Integer> spawnerLevelFuture = Main.database.getSpawnerLevel(block);
+            CompletableFuture.allOf(storageLimitFuture, spawnerLevelFuture).thenRun(() -> {
+                int storageLimit = storageLimitFuture.join();
+                int spawnerLevel = spawnerLevelFuture.join();
+                mobDrops.forEach((material, amount) -> {
+                    Main.database.getSpawnerStoredByItem(block, material).thenAccept(previousStored -> {
+                        int newAmount = previousStored + amount;
+                        if (newAmount >= storageLimit) {
+                            newAmount = storageLimit;
+                        }
+                        Main.database.updateStorage(block, material, newAmount);
+                    });
+                });
             });
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().log(Level.SEVERE, "Error adding drops to storage", ex);
+            return null;
         });
     }
 
+    public void addXPToStorage(Block block, int addAmount) {
+        CompletableFuture<Integer> storedXPFuture = Main.database.getStoredXP(block);
+        CompletableFuture<Integer> spawnerLevelFuture = Main.database.getSpawnerLevel(block);
+        CompletableFuture.allOf(storedXPFuture, spawnerLevelFuture).thenRun(() -> {
+            int previousXP = storedXPFuture.join();
+            int spawnerLevel = spawnerLevelFuture.join();
+            int addThis = previousXP + (addAmount * spawnerLevel);
+            int xpLimit = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
+            if (addThis > xpLimit) {
+                addThis = xpLimit;
+            }
+            Main.database.updateXP(block, addThis);
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().log(Level.SEVERE, "Error adding XP to storage", ex);
+            return null;
+        });
+    }
 
-    @EventHandler(
-            priority = EventPriority.HIGHEST
-    )
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onSpawnerSpawnEvent(SpawnerSpawnEvent e) {
         Block block = e.getSpawner().getBlock();
-        Main.database.spawnerHasOwner(block).thenAccept(spawner_has_owner -> Main.database.isAutoKillEnabled(block).thenAccept(is_autokill_enabled -> Main.database.getSpawnerMode(block).thenAccept(spawner_mode -> Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> Main.database.getStorageLimit(block).thenAccept(storage_limit -> Main.database.getSpawnerType(block).thenAccept(spawner_type -> {
-            if (spawner_has_owner) {
+        Main.database.spawnerHasOwner(block).thenAccept(spawnerHasOwner -> {
+            if (spawnerHasOwner) {
+                CompletableFuture<Boolean> isAutoKillEnabledFuture = Main.database.isAutoKillEnabled(block);
+                CompletableFuture<String> spawnerModeFuture = Main.database.getSpawnerMode(block);
+                CompletableFuture<Integer> spawnerLevelFuture = Main.database.getSpawnerLevel(block);
+                CompletableFuture<Integer> storageLimitFuture = Main.database.getStorageLimit(block);
+                CompletableFuture<String> spawnerTypeFuture = Main.database.getSpawnerType(block);
 
-                // Check auto kill feature.
-                if (!spawner_auto_kill_check.containsKey(e.getSpawner().getBlock())) {
-                    if (is_autokill_enabled) {
-                        spawner_auto_kill_check.put(e.getSpawner().getBlock(), true);
-                    } else {
-                        spawner_auto_kill_check.put(e.getSpawner().getBlock(), false);
-                    }
-                }
+                CompletableFuture.allOf(isAutoKillEnabledFuture, spawnerModeFuture, spawnerLevelFuture, storageLimitFuture, spawnerTypeFuture)
+                        .thenRun(() -> {
+                            boolean isAutoKillEnabled = isAutoKillEnabledFuture.join();
+                            String spawnerMode = spawnerModeFuture.join();
+                            int spawnerLevel = spawnerLevelFuture.join();
+                            int storageLimit = storageLimitFuture.join();
+                            String spawnerType = spawnerTypeFuture.join();
 
-                // Check if the virtual storage module is enabled.
-                if (Main.getPlugin().storageEnabled) {
+                            if (!spawnerAutoKillCheck.containsKey(block)) {
+                                spawnerAutoKillCheck.put(block, isAutoKillEnabled);
+                            }
 
-                    // If storage module is enabled, and spawner mode is entity.
-                    if (spawner_mode.equalsIgnoreCase("ENTITY")) {
-                        // If auto-kill is enabled in config.
-                        if (Main.getPlugin().getConfig().getString("config.modules.auto-kill.enabled").equalsIgnoreCase("true")) {
-                            // If auto-kill is enabled for this specific spawner.
-                            if (spawner_auto_kill_check.get(e.getSpawner().getBlock())) {
-                                e.getEntity().remove();
-                                if (Main.getPlugin().getLootTable(e.getEntity().getType().toString()) != null) {
+                            boolean isAutoKillEnabledInConfig = Main.getPlugin().getConfig().getString("config.modules.auto-kill.enabled").equalsIgnoreCase("true");
 
-                                    addDropsToStorage(block, e.getEntity().getType().toString());
-                                    addXPToStorage(block, Main.getPlugin().getLootTableXP(e.getEntity().getType().toString()));
-
-                                }
+                            if (Main.getPlugin().storageEnabled) {
+                                handleStorageEnabled(e, block, spawnerMode, spawnerLevel, storageLimit, spawnerType, isAutoKillEnabledInConfig);
                             } else {
-                                entityLinkToSpawners.put(e.getEntity().getUniqueId(), e.getSpawner().getBlock());
+                                handleStorageDisabled(e, block, spawnerMode, spawnerLevel, spawnerType, isAutoKillEnabledInConfig);
                             }
-                        } else {
-                            entityLinkToSpawners.put(e.getEntity().getUniqueId(), e.getSpawner().getBlock());
-                        }
-
-                        // If storage is enabled, and spawner mode is item.
-                    } else if (spawner_mode.equalsIgnoreCase("ITEM")) {
-                        e.getEntity().remove();
-                        int spawnerLevel = spawner_level;
-                        String spawned_item = Main.getPlugin().getConfig().getString("spawners." + spawner_type + ".spawnerInfo.material");
-                        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawned_item.toUpperCase()).parseMaterial());
-                        int storage = storage_limit;
-                        Main.database.getSpawnerStoredByItem(block, itemStack.getType()).thenAccept(previous -> {
-                            int newAmount = previous + spawnerLevel;
-
-                            if (newAmount > storage) {
-                                newAmount = storage;
-                            }
-
-                            Main.database.updateStorage(e.getSpawner().getBlock(), itemStack.getType(), newAmount);
+                        }).exceptionally(ex -> {
+                            Main.getPlugin().getLogger().log(Level.SEVERE, "Error processing spawner spawn event", ex);
+                            return null;
                         });
-                    }
-
-                    // If the storage module is disabled.
-                } else {
-
-                    // If the storage module is disabled, and the spawner mode is item.
-                    if (spawner_mode.equalsIgnoreCase("ITEM")) {
-                        e.getEntity().remove();
-                        String spawned_item = Main.getPlugin().getConfig().getString("spawners." + spawner_type + ".spawnerInfo.material");
-                        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawned_item.toUpperCase()).parseMaterial());
-
-                        ItemMeta meta = itemStack.getItemMeta();
-                        String itemName = Main.getPlugin().getConfig().get("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.name") == null ? null : Main.getPlugin().getConfig().getString("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.name");
-                        List<String> itemLore = Main.getPlugin().getConfig().getList("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.lore") == null ? null : Main.getPlugin().getConfig().getStringList("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.lore");
-                        List<String> realLore = new ArrayList<>();
-
-                        if (itemName != null) {
-                            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', itemName));
-                        }
-                        if (itemLore != null) {
-                            for (String text : itemLore) {
-                                realLore.add(ChatColor.translateAlternateColorCodes('&', text));
-                            }
-                            meta.setLore(realLore);
-                        }
-
-                        itemStack.setItemMeta(meta);
-
-                        itemStack.setAmount(1);
-                        Location dropLocation = e.getSpawner().getLocation();
-                        dropLocation = dropLocation.subtract(0, 1, 0);
-                        int spawnerLevel = spawner_level;
-
-                        while (spawnerLevel > 0) {
-                            ItemStack itemToDrop = itemStack.clone();
-                            if (spawnerLevel > 64) {
-                                itemToDrop.setAmount(64);
-                                e.getSpawner().getWorld().dropItemNaturally(dropLocation, itemToDrop);
-                                spawnerLevel -= 64;
-                            } else {
-                                itemToDrop.setAmount(spawnerLevel);
-                                e.getSpawner().getWorld().dropItemNaturally(dropLocation, itemToDrop);
-                                spawnerLevel -= spawnerLevel;
-                            }
-                        }
-                    } else {
-                        if (Main.getPlugin().getConfig().getString("config.modules.auto-kill.enabled").equalsIgnoreCase("true")) {
-                            if (spawner_auto_kill_check.get(e.getSpawner().getBlock())) {
-                                Location location = e.getEntity().getLocation();
-                                e.getEntity().remove();
-                                dropItems(block, block.getWorld(), location, e.getEntity().getType().toString());
-                                if (!Main.getPlugin().lang.getBoolean("menu.exp.gui")) {
-                                    dropXP(block, block.getWorld(), location, e.getEntity().getType().toString());
-                                } else {
-                                    addXPToStorage(block, Main.plugin.getLootTableXP(e.getEntity().getType().toString()));
-                                }
-                            } else {
-                                entityLinkToSpawners.put(e.getEntity().getUniqueId(), e.getSpawner().getBlock());
-                            }
-                        } else {
-                            entityLinkToSpawners.put(e.getEntity().getUniqueId(), e.getSpawner().getBlock());
-                        }
-                    }
-                }
             }
-        }))))));
+        });
+    }
+
+    private void handleStorageEnabled(SpawnerSpawnEvent e, Block block, String spawnerMode, int spawnerLevel, int storageLimit, String spawnerType, boolean isAutoKillEnabledInConfig) {
+        if (spawnerMode.equalsIgnoreCase("ENTITY")) {
+            handleEntityMode(e, block, spawnerLevel, storageLimit, isAutoKillEnabledInConfig);
+        } else if (spawnerMode.equalsIgnoreCase("ITEM")) {
+            handleItemMode(e, block, spawnerLevel, storageLimit, spawnerType);
+        }
+    }
+
+    private void handleEntityMode(SpawnerSpawnEvent e, Block block, int spawnerLevel, int storageLimit, boolean isAutoKillEnabledInConfig) {
+        if (isAutoKillEnabledInConfig && spawnerAutoKillCheck.get(block)) {
+            e.getEntity().remove();
+            String entityType = e.getEntity().getType().toString();
+            if (Main.getPlugin().getLootTable(entityType) != null) {
+                addDropsToStorage(block, entityType);
+                addXPToStorage(block, Main.getPlugin().getLootTableXP(entityType));
+            }
+        } else {
+            entityLinkToSpawners.put(e.getEntity().getUniqueId(), block);
+        }
+    }
+
+    private void handleItemMode(SpawnerSpawnEvent e, Block block, int spawnerLevel, int storageLimit, String spawnerType) {
+        e.getEntity().remove();
+        String spawnedItem = Main.getPlugin().getConfig().getString("spawners." + spawnerType + ".spawnerInfo.material");
+        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawnedItem.toUpperCase()).parseMaterial());
+        Main.database.getSpawnerStoredByItem(block, itemStack.getType()).thenAccept(previous -> {
+            int newAmount = previous + spawnerLevel;
+            if (newAmount > storageLimit) {
+                newAmount = storageLimit;
+            }
+            Main.database.updateStorage(block, itemStack.getType(), newAmount);
+        }).exceptionally(ex -> {
+            Main.getPlugin().getLogger().log(Level.SEVERE, "Error updating item storage", ex);
+            return null;
+        });
+    }
+
+    private void handleStorageDisabled(SpawnerSpawnEvent e, Block block, String spawnerMode, int spawnerLevel, String spawnerType, boolean isAutoKillEnabledInConfig) {
+        if (spawnerMode.equalsIgnoreCase("ITEM")) {
+            handleItemModeWithoutStorage(e, block, spawnerLevel, spawnerType);
+        } else if (spawnerMode.equalsIgnoreCase("ENTITY")) {
+            handleEntityModeWithoutStorage(e, block, spawnerLevel, isAutoKillEnabledInConfig);
+        }
+    }
+
+    private void handleItemModeWithoutStorage(SpawnerSpawnEvent e, Block block, int spawnerLevel, String spawnerType) {
+        e.getEntity().remove();
+        String spawnedItem = Main.getPlugin().getConfig().getString("spawners." + spawnerType + ".spawnerInfo.material");
+        ItemStack itemStack = new ItemStack(XMaterial.valueOf(spawnedItem.toUpperCase()).parseMaterial());
+
+        ItemMeta meta = itemStack.getItemMeta();
+        String itemName = Main.getPlugin().getConfig().getString("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.name");
+        List<String> itemLore = Main.getPlugin().getConfig().getStringList("spawners." + itemStack.getType().toString().toLowerCase() + ".spawnerInfo.details.lore");
+
+        if (itemName != null) {
+            meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', itemName));
+        }
+        if (itemLore != null) {
+            List<String> realLore = new ArrayList<>();
+            for (String text : itemLore) {
+                realLore.add(ChatColor.translateAlternateColorCodes('&', text));
+            }
+            meta.setLore(realLore);
+        }
+
+        itemStack.setItemMeta(meta);
+        dropItemsNaturally(e, itemStack, spawnerLevel);
+    }
+
+    private void handleEntityModeWithoutStorage(SpawnerSpawnEvent e, Block block, int spawnerLevel, boolean isAutoKillEnabledInConfig) {
+        if (isAutoKillEnabledInConfig && spawnerAutoKillCheck.get(block)) {
+            Location location = e.getEntity().getLocation();
+            e.getEntity().remove();
+            dropItems(block, block.getWorld(), location, e.getEntity().getType().toString());
+            if (!isXPStorageEnabled()) {
+                dropXP(block, block.getWorld(), location, e.getEntity().getType().toString());
+            } else {
+                addXPToStorage(block, Main.plugin.getLootTableXP(e.getEntity().getType().toString()));
+            }
+        } else {
+            entityLinkToSpawners.put(e.getEntity().getUniqueId(), block);
+        }
+    }
+
+    private void dropItemsNaturally(SpawnerSpawnEvent e, ItemStack itemStack, int spawnerLevel) {
+        Location dropLocation = e.getSpawner().getLocation().subtract(0, 1, 0);
+        while (spawnerLevel > 0) {
+            ItemStack itemToDrop = itemStack.clone();
+            if (spawnerLevel > 64) {
+                itemToDrop.setAmount(64);
+                e.getSpawner().getWorld().dropItemNaturally(dropLocation, itemToDrop);
+                spawnerLevel -= 64;
+            } else {
+                itemToDrop.setAmount(spawnerLevel);
+                e.getSpawner().getWorld().dropItemNaturally(dropLocation, itemToDrop);
+                spawnerLevel -= spawnerLevel;
+            }
+        }
     }
 
     public boolean isXPStorageEnabled() {
@@ -226,298 +252,169 @@ public class SpawnerSpawnListener implements Listener {
         return Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.loottable-only-autokill");
     }
 
-
     @EventHandler
     public void onSpawnerEntityDeathEvent(EntityDeathEvent e) {
-        if (entityLinkToSpawners.containsKey(e.getEntity().getUniqueId())) {
-            Block block = entityLinkToSpawners.get(e.getEntity().getUniqueId());
+        UUID entityUUID = e.getEntity().getUniqueId();
+        if (entityLinkToSpawners.containsKey(entityUUID)) {
+            Block block = entityLinkToSpawners.get(entityUUID);
             Entity entity = e.getEntity();
-            Location entity_location = e.getEntity().getLocation();
-            World world = e.getEntity().getWorld();
-            UUID entity_uuid = e.getEntity().getUniqueId();
-            List<ItemStack> entity_drops = new ArrayList<>(e.getDrops());
-            List<ItemStack> custom_loottable = Main.getPlugin().getLootTable(entity.getName().toLowerCase());
-            final int[] dropped_xp = {e.getDroppedExp()};
+            Location entityLocation = entity.getLocation();
+            World world = entity.getWorld();
+            List<ItemStack> entityDrops = new ArrayList<>(e.getDrops());
+            List<ItemStack> customLootTable = Main.getPlugin().getLootTable(entity.getName().toLowerCase());
+            int[] droppedXP = {e.getDroppedExp()};
             e.setDroppedExp(0);
             e.getDrops().clear();
-            Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> {
-               Main.database.getStorageLimit(block).thenAccept(storage_limit -> {
-                   Main.database.getStoredXP(block).thenAccept(spawner_xp -> {
-                       // If virtual storage is enabled.
-                      if (Main.getPlugin().storageEnabled) {
-                          // If virtual storage is enabled and custom loottable for this mob does not exist.
-                          if (custom_loottable == null || loottableOnlyAutokill()) {
-                              int spawnerLevel = spawner_level;
-                              int droppedXP = dropped_xp[0];
-                              if (droppedXP == 0) {
-                                  Random random = new Random();
-                                  if (random.nextInt(100) <= 80) {
-                                      droppedXP = random.nextInt(8);
-                                  }
-                              }
 
-                              droppedXP *= spawnerLevel;
-                              int maxStorage = storage_limit;
-                              if (entity_drops.isEmpty()) {
-                              }
-                              for (ItemStack item : entity_drops) {
-                                  Main.database.getSpawnerStoredByItem(block, item.getType()).thenAccept(previous -> {
-                                      int newAmount = previous + (item.getAmount() * spawnerLevel);
-                                      if (newAmount > maxStorage) {
-                                          newAmount = maxStorage;
-                                      }
-                                      Main.database.updateStorage(block, item.getType(), newAmount);
-                                  });
-                              }
+            CompletableFuture<Integer> spawnerLevelFuture = Main.database.getSpawnerLevel(block);
+            CompletableFuture<Integer> storageLimitFuture = Main.database.getStorageLimit(block);
+            CompletableFuture<Integer> storedXPFuture = Main.database.getStoredXP(block);
 
-                              int previousXP = spawner_xp;
-                              int newXP = previousXP + droppedXP;
-                              if (newXP > Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
-                                  newXP = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
-                              }
-                              Main.database.updateXP(block, newXP);
-                              entityLinkToSpawners.remove(entity_uuid);
+            CompletableFuture.allOf(spawnerLevelFuture, storageLimitFuture, storedXPFuture).thenRun(() -> {
+                int spawnerLevel = spawnerLevelFuture.join();
+                int storageLimit = storageLimitFuture.join();
+                int spawnerXP = storedXPFuture.join();
 
-                          // If virtual storage is enabled and custom loottable exists for this mob.
-                          // OR!! if virtual storage is enabled and CUSTOM LOOTTABLE only exists on AUTO-KILL!
-                          } else {
-                              int spawnerLevel = spawner_level;
-                              int maxStorage = storage_limit;
-                              int previousXP = spawner_xp;
-                              Integer currentXP = Main.getPlugin().getLootTableXP(entity.getName().toLowerCase());
-                              custom_loottable.forEach(itemStack -> Main.database.getSpawnerStoredByItem(block, itemStack.getType()).thenAccept(previous -> {
-                                  int newAmount = previous + (itemStack.getAmount() * spawnerLevel);
-                                  if (newAmount > maxStorage) {
-                                      newAmount = maxStorage;
-                                  }
-                                  Main.database.updateStorage(block, itemStack.getType(), newAmount);
-                              }));
-                              if (currentXP != null) {
-                                  int newXP = previousXP + currentXP;
-                                  if (newXP > Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
-                                      newXP = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
-                                  }
-                                  Main.database.updateXP(block, newXP);
-                              }
-                          }
-                      // If virtual storage is disabled.
-                      } else {
-                          // If custom loottable does not exist for this mob.
-                          if (custom_loottable == null || loottableOnlyAutokill()) {
-                              int spawnerLevel = spawner_level;
-                              if (dropped_xp[0] == 0) {
-                                  Random random = new Random();
-                                  if (random.nextInt(100) <= 80) {
-                                      dropped_xp[0] = (random.nextInt(8));
-                                  }
-                              }
-                              if (!isXPStorageEnabled()) {
-                                  world.spawn(entity_location, ExperienceOrb.class, x -> x.setExperience(dropped_xp[0] * spawnerLevel));
-                              } else {
-                                  Main.database.updateXP(block, dropped_xp[0] * spawnerLevel);
-                              }
-                              entity_drops.forEach(itemStack -> {
-                                  int amount = itemStack.getAmount() * spawnerLevel;
-                                  ItemStack itemStack1 = itemStack.clone();
-                                  itemStack1.setAmount(1);
-                                  while (amount > 0) {
-                                      ItemStack itemToDrop = itemStack1.clone();
-                                      if (amount > 64) {
-                                          itemToDrop.setAmount(64);
-                                          world.dropItemNaturally(entity_location, itemToDrop);
-                                          amount -= 64;
-                                      } else {
-                                          itemToDrop.setAmount(amount);
-                                          world.dropItemNaturally(entity_location, itemToDrop);
-                                          amount -= amount;
-                                      }
-                                  }
-                              });
-                          } else {
-                              // If virtual storage is disabled but custom loottables exist.
-                              // OR!!! virtual storage is disabled BUT CUSTOM LOOTTABLE only works for auto-kill.
-                              int spawnerLevel = spawner_level;
-                              Integer dropped_xp_loottable = Main.getPlugin().getLootTableXP(entity.getName().toLowerCase());
-                              assert dropped_xp_loottable != null;
-                              if (dropped_xp_loottable == 0) {
-                                  Random random = new Random();
-                                  if (random.nextInt(100) <= 80) {
-                                      dropped_xp_loottable = (random.nextInt(8));
-                                  }
-                              }
-                              if (!isXPStorageEnabled()) {
-                                  Integer finalDropped_xp_loottable = dropped_xp_loottable;
-                                  world.spawn(entity_location, ExperienceOrb.class, x -> x.setExperience(finalDropped_xp_loottable * spawnerLevel));
-                              } else {
-                                  Main.database.updateXP(block, dropped_xp_loottable * spawnerLevel);
-                              }
-                              custom_loottable.forEach(itemStack -> {
-                                  int amount = (itemStack.getAmount() * spawnerLevel);
-                                  while (amount > 0) {
-                                      ItemStack itemToDrop = itemStack.clone();
-                                      if (amount > 64) {
-                                          itemToDrop.setAmount(64);
-                                          world.dropItemNaturally(entity_location, itemToDrop);
-                                          amount -= 64;
-                                      } else {
-                                          itemToDrop.setAmount(amount);
-                                          world.dropItemNaturally(entity_location, itemToDrop);
-                                          amount -= amount;
-                                      }
-                                  }
-                              });
-                          }
-                      }
-                   });
-               });
+                handleEntityDeath(e, block, entity, entityLocation, world, entityDrops, customLootTable, droppedXP, spawnerLevel, storageLimit, spawnerXP);
+                entityLinkToSpawners.remove(entityUUID);
+            }).exceptionally(ex -> {
+                Main.getPlugin().getLogger().log(Level.SEVERE, "Error processing entity death event", ex);
+                return null;
             });
         }
     }
 
-    /*@EventHandler
-    public void onSpawnerEntityDeathEvent(EntityDeathEvent e) {
-        if (entityLinkToSpawners.containsKey(e.getEntity().getUniqueId())) {
-            Block block = entityLinkToSpawners.get(e.getEntity().getUniqueId());
-            Main.database.getSpawnerLevel(block).thenAccept(spawner_level -> Main.database.getStorageLimit(block).thenAccept(storage_limit -> Main.database.getStoredXP(block).thenAccept(stored_xp -> {
-                if (e.getEntity() instanceof Blaze) {
-                    if (e.getDrops().isEmpty()) {
-                        ItemStack itemStack = XMaterial.BLAZE_ROD.parseItem();
-                        Random random = new Random();
-                        if (random.nextInt(100) >= 80) {
-                            int amount = random.nextInt(2);
-                            amount += 1;
-                            assert itemStack != null;
-                            itemStack.setAmount(amount);
-                            e.getDrops().add(itemStack);
-                        }
-                    }
-                }
-                List<ItemStack> customLoottable = Main.getPlugin().getLootTable(e.getEntity().getName().toLowerCase());
-                if (Main.plugin.storageEnabled) {
-                    if (customLoottable == null) {
-                        int spawnerLevel = spawner_level;
-                        int droppedXP = e.getDroppedExp();
-                        if (droppedXP == 0) {
-                            Random random = new Random();
-                            if (random.nextInt(100) <= 80) {
-                                droppedXP = random.nextInt(8);
-                            }
-                        }
-
-                        droppedXP *= spawnerLevel;
-                        int maxStorage = storage_limit;
-                        e.getDrops().forEach(item -> Main.database.getSpawnerStoredByItem(block, item.getType()).thenAccept(previous -> {
-                            int newAmount = previous + (item.getAmount() * spawnerLevel);
-                            if (newAmount > maxStorage) {
-                                newAmount = maxStorage;
-                            }
-                            Main.database.updateStorage(block, item.getType(), newAmount);
-                        }));
-
-                        int previousXP = stored_xp;
-                        int newXP = previousXP + droppedXP;
-                        if (newXP > Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
-                            newXP = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
-                        }
-                        Main.database.updateXP(block, newXP);
-                        e.getDrops().clear();
-                        e.setDroppedExp(0);
-                        entityLinkToSpawners.remove(e.getEntity().getUniqueId());
-
-                        // If custom loottable does exist & is enabled.
-                    } else {
-                        e.getDrops().clear();
-                        e.setDroppedExp(0);
-                        int spawnerLevel = spawner_level;
-                        int maxStorage = storage_limit;
-                        int previousXP = stored_xp;
-                        Integer currentXP = Main.getPlugin().getLootTableXP(e.getEntity().getName().toLowerCase());
-                        customLoottable.forEach(itemStack -> Main.database.getSpawnerStoredByItem(block, itemStack.getType()).thenAccept(previous -> {
-                            int newAmount = previous + (itemStack.getAmount() * spawnerLevel);
-                            if (newAmount > maxStorage) {
-                                newAmount = maxStorage;
-                            }
-                            Main.database.updateStorage(block, itemStack.getType(), newAmount);
-                        }));
-                        if (currentXP != null) {
-                            int newXP = previousXP + currentXP;
-                            if (newXP > Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
-                                newXP = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
-                            }
-                            Main.database.updateXP(block, newXP);
-                        }
-                    }
-
-                    // If the virtual storage is disabled.
-                } else {
-                    if (customLoottable == null) {
-                        int spawnerLevel = spawner_level;
-                        int dropped_xp = e.getDroppedExp();
-                        if (dropped_xp == 0) {
-                            Random random = new Random();
-                            if (random.nextInt(100) <= 80) {
-                                dropped_xp = (random.nextInt(8));
-                            }
-                        }
-                        if (!isXPStorageEnabled()) {
-                            e.setDroppedExp(dropped_xp * spawnerLevel);
-                        } else {
-                            Main.database.updateXP(block, dropped_xp * spawnerLevel);
-                            e.setDroppedExp(0);
-                        }
-                        e.getDrops().forEach(itemStack -> {
-                            int amount = itemStack.getAmount() * spawnerLevel;
-                            ItemStack itemStack1 = itemStack.clone();
-                            itemStack1.setAmount(1);
-                            while (amount > 0) {
-                                ItemStack itemToDrop = itemStack1.clone();
-                                if (amount > 64) {
-                                    itemToDrop.setAmount(64);
-                                    e.getEntity().getWorld().dropItemNaturally(e.getEntity().getLocation(), itemToDrop);
-                                    amount -= 64;
-                                } else {
-                                    itemToDrop.setAmount(amount);
-                                    e.getEntity().getWorld().dropItemNaturally(e.getEntity().getLocation(), itemToDrop);
-                                    amount -= amount;
-                                }
-                            }
-                        });
-                    } else {
-                        // If virtual storage is disabled but custom loottables exist.
-                        e.getDrops().clear();
-                        int spawnerLevel = spawner_level;
-                        Integer dropped_xp = Main.getPlugin().getLootTableXP(e.getEntity().getName().toLowerCase());
-                        assert dropped_xp != null;
-                        if (dropped_xp == 0) {
-                            Random random = new Random();
-                            if (random.nextInt(100) <= 80) {
-                                dropped_xp = (random.nextInt(8));
-                            }
-                        }
-                        if (!isXPStorageEnabled()) {
-                            e.setDroppedExp(dropped_xp * spawnerLevel);
-                        } else {
-                            Main.database.updateXP(block, dropped_xp * spawnerLevel);
-                        }
-                        e.setDroppedExp(0);
-                        customLoottable.forEach(itemStack -> {
-                            int amount = (itemStack.getAmount() * spawnerLevel);
-                            while (amount > 0) {
-                                ItemStack itemToDrop = itemStack.clone();
-                                if (amount > 64) {
-                                    itemToDrop.setAmount(64);
-                                    e.getEntity().getWorld().dropItemNaturally(e.getEntity().getLocation(), itemToDrop);
-                                    amount -= 64;
-                                } else {
-                                    itemToDrop.setAmount(amount);
-                                    e.getEntity().getWorld().dropItemNaturally(e.getEntity().getLocation(), itemToDrop);
-                                    amount -= amount;
-                                }
-                            }
-                        });
-                    }
-                }
-            })));
+    private void handleEntityDeath(EntityDeathEvent e, Block block, Entity entity, Location entityLocation, World world, List<ItemStack> entityDrops, List<ItemStack> customLootTable, int[] droppedXP, int spawnerLevel, int storageLimit, int spawnerXP) {
+        if (Main.getPlugin().storageEnabled) {
+            handleEntityDeathWithStorage(block, entity, entityLocation, world, entityDrops, customLootTable, droppedXP, spawnerLevel, storageLimit, spawnerXP);
+        } else {
+            handleEntityDeathWithoutStorage(e, block, entity, entityLocation, world, entityDrops, customLootTable, droppedXP, spawnerLevel);
         }
-    }*/
+    }
+
+    private void handleEntityDeathWithStorage(Block block, Entity entity, Location entityLocation, World world, List<ItemStack> entityDrops, List<ItemStack> customLootTable, int[] droppedXP, int spawnerLevel, int storageLimit, int spawnerXP) {
+        if (customLootTable == null || loottableOnlyAutokill()) {
+            handleDefaultLootWithStorage(block, entityDrops, droppedXP, spawnerLevel, storageLimit, spawnerXP);
+        } else {
+            handleCustomLootWithStorage(block, customLootTable, entity.getName().toLowerCase(), spawnerLevel, storageLimit, spawnerXP);
+        }
+    }
+
+    private void handleDefaultLootWithStorage(Block block, List<ItemStack> entityDrops, int[] droppedXP, int spawnerLevel, int storageLimit, int spawnerXP) {
+        Random random = new Random();
+        if (droppedXP[0] == 0 && random.nextInt(100) <= 80) {
+            droppedXP[0] = random.nextInt(8);
+        }
+        droppedXP[0] *= spawnerLevel;
+
+        entityDrops.forEach(item -> {
+            Main.database.getSpawnerStoredByItem(block, item.getType()).thenAccept(previous -> {
+                int newAmount = previous + (item.getAmount() * spawnerLevel);
+                if (newAmount > storageLimit) {
+                    newAmount = storageLimit;
+                }
+                Main.database.updateStorage(block, item.getType(), newAmount);
+            });
+        });
+
+        int newXP = spawnerXP + droppedXP[0];
+        if (newXP > Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
+            newXP = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
+        }
+        Main.database.updateXP(block, newXP);
+    }
+
+    private void handleCustomLootWithStorage(Block block, List<ItemStack> customLootTable, String entityName, int spawnerLevel, int storageLimit, int spawnerXP) {
+        customLootTable.forEach(itemStack -> {
+            Main.database.getSpawnerStoredByItem(block, itemStack.getType()).thenAccept(previous -> {
+                int newAmount = previous + (itemStack.getAmount() * spawnerLevel);
+                if (newAmount > storageLimit) {
+                    newAmount = storageLimit;
+                }
+                Main.database.updateStorage(block, itemStack.getType(), newAmount);
+            });
+        });
+
+        Integer currentXP = Main.getPlugin().getLootTableXP(entityName.toLowerCase());
+        if (currentXP != null) {
+            int newXP = spawnerXP + currentXP;
+            int xpLimit = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
+            if (newXP > xpLimit) {
+                newXP = xpLimit;
+            }
+            Main.database.updateXP(block, newXP);
+        }
+    }
+
+
+    private void handleEntityDeathWithoutStorage(EntityDeathEvent e, Block block, Entity entity, Location entityLocation, World world, List<ItemStack> entityDrops, List<ItemStack> customLootTable, int[] droppedXP, int spawnerLevel) {
+        Random random = new Random();
+        if (droppedXP[        0] == 0 && random.nextInt(100) <= 80) {
+            droppedXP[0] = random.nextInt(8);
+        }
+
+        if (customLootTable == null || loottableOnlyAutokill()) {
+            handleDefaultLootWithoutStorage(e, entity, entityLocation, world, entityDrops, droppedXP, spawnerLevel);
+        } else {
+            handleCustomLootWithoutStorage(entityLocation, world, customLootTable, droppedXP, spawnerLevel);
+        }
+    }
+
+    private void handleDefaultLootWithoutStorage(EntityDeathEvent e, Entity entity, Location entityLocation, World world, List<ItemStack> entityDrops, int[] droppedXP, int spawnerLevel) {
+        if (!isXPStorageEnabled()) {
+            world.spawn(entityLocation, ExperienceOrb.class, x -> x.setExperience(droppedXP[0] * spawnerLevel));
+        } else {
+            Main.database.updateXP(entityLinkToSpawners.get(entity.getUniqueId()), droppedXP[0] * spawnerLevel);
+        }
+
+        entityDrops.forEach(itemStack -> {
+            int amount = itemStack.getAmount() * spawnerLevel;
+            ItemStack singleItemStack = itemStack.clone();
+            singleItemStack.setAmount(1);
+            while (amount > 0) {
+                ItemStack itemToDrop = singleItemStack.clone();
+                if (amount > 64) {
+                    itemToDrop.setAmount(64);
+                    world.dropItemNaturally(entityLocation, itemToDrop);
+                    amount -= 64;
+                } else {
+                    itemToDrop.setAmount(amount);
+                    world.dropItemNaturally(entityLocation, itemToDrop);
+                    amount = 0;
+                }
+            }
+        });
+    }
+
+    private void handleCustomLootWithoutStorage(Location entityLocation, World world, List<ItemStack> customLootTable, int[] droppedXP, int spawnerLevel) {
+        Integer currentXP = Main.getPlugin().getLootTableXP(entityLocation.getWorld().getName().toLowerCase());
+        if (currentXP == null || currentXP == 0) {
+            Random random = new Random();
+            if (random.nextInt(100) <= 80) {
+                currentXP = random.nextInt(8);
+            }
+        }
+        if (!isXPStorageEnabled()) {
+            Integer finalCurrentXP = currentXP;
+            world.spawn(entityLocation, ExperienceOrb.class, x -> x.setExperience(finalCurrentXP * spawnerLevel));
+        } else {
+            Main.database.updateXP(entityLinkToSpawners.get(entityLocation), currentXP * spawnerLevel);
+        }
+
+        customLootTable.forEach(itemStack -> {
+            int amount = itemStack.getAmount() * spawnerLevel;
+            while (amount > 0) {
+                ItemStack itemToDrop = itemStack.clone();
+                if (amount > 64) {
+                    itemToDrop.setAmount(64);
+                    world.dropItemNaturally(entityLocation, itemToDrop);
+                    amount -= 64;
+                } else {
+                    itemToDrop.setAmount(amount);
+                    world.dropItemNaturally(entityLocation, itemToDrop);
+                    amount = 0;
+                }
+            }
+        });
+    }
 }

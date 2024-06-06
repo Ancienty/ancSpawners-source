@@ -1,6 +1,8 @@
 package com.ancienty.ancspawners.Database;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 
@@ -55,6 +57,11 @@ public interface Database {
 
     // Methods
     void placeSpawner(Player player, Block block, String mode, String type);
+
+    CompletableFuture<Boolean> doesLocationHaveSpawner(World world, Location location);
+
+    void deleteSpawner(World world, Location location);
+
     void breakSpawner(Player player, Block block);
     void enableAutoKill(Player player, Block block);
     void closeHikariCP();
