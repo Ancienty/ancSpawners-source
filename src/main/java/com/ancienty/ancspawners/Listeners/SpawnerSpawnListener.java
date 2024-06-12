@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.SlimeSplitEvent;
 import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -251,6 +252,22 @@ public class SpawnerSpawnListener implements Listener {
     public boolean loottableOnlyAutokill() {
         return Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.loottable-only-autokill");
     }
+
+    @EventHandler
+    public void onSlimeSplit(SlimeSplitEvent e) {
+        Entity entity = e.getEntity();
+        UUID parentUUID = entity.getUniqueId();
+
+        if (entityLinkToSpawners.containsKey(parentUUID)) {
+            Block block = entityLinkToSpawners.get(parentUUID);
+            for (Entity child : entity.getWorld().getNearbyEntities(entity.getLocation(), 1, 1, 1)) {
+                if (child instanceof Slime && !entityLinkToSpawners.containsKey(child.getUniqueId())) {
+                    entityLinkToSpawners.put(child.getUniqueId(), block);
+                }
+            }
+        }
+    }
+
 
     @EventHandler
     public void onSpawnerEntityDeathEvent(EntityDeathEvent e) {

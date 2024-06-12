@@ -138,6 +138,7 @@ spawners:
       material: ZOMBIE
       range: 16
       delay: 8
+      sell_button: true
   skeleton:
     name: "&c&lSKELETON &8-- &7Spawner"
     lore:
@@ -150,6 +151,7 @@ spawners:
       material: SKELETON
       range: 16
       delay: 8
+      sell_button: true
   diamond:
     name: "&b&lDIAMOND &8-- &7Spawner"
     lore:
@@ -162,6 +164,7 @@ spawners:
       material: DIAMOND
       range: 16
       delay: 8
+      sell_button: true
       # NOTE: Details are only applicable to mode: ITEM spawners.
       # and the storage function must be turned off to actually see the result.
       # to turn off storage, go into your lang file, find storage, and set gui to false.

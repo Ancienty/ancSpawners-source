@@ -4,6 +4,7 @@ import com.ancienty.ancspawners.Main;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import de.tr7zw.nbtapi.utils.MinecraftVersion;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -36,6 +37,10 @@ public class SQLite implements Database {
 
             // Initialization Fail Timeout
             config.setInitializationFailTimeout(30000); // 30 seconds - Fail fast if database is unreachable
+
+            if (!MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_12_R1)) {
+                config.setConnectionTestQuery("SELECT 1");
+            }
 
             dataSource = new HikariDataSource(config);
         }
