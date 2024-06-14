@@ -89,6 +89,7 @@ public final class Main extends JavaPlugin implements Listener {
 
         try {createLangFiles();} catch (IOException e) {throw new RuntimeException(e);}
         getLogger().info("Registering events.");
+        getServer().getPluginManager().registerEvents(new SpawnerManager(), this);
         getServer().getPluginManager().registerEvents(new SpawnerPlaceListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerBreakListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerSpawnListener(), this);
@@ -101,6 +102,9 @@ public final class Main extends JavaPlugin implements Listener {
         new SpawnerCommand();
 
         storageEnabled = lang.getString("menu.storage.gui").equalsIgnoreCase("true");
+
+        // Spawner loading part.
+        new SpawnerManager().loadSpawners();
 
 
         // Update checker.

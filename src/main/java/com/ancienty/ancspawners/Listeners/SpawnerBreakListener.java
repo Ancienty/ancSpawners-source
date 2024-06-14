@@ -19,6 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
@@ -55,43 +56,31 @@ public class SpawnerBreakListener implements Listener {
     }
 
     private void handleSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
-        Main.database.spawnerHasOwner(clickedBlock).thenAccept(spawnerHasOwner -> {
-            if (spawnerHasOwner) {
-                try {
-                    handleOwnedSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
-                } catch (ExecutionException | InterruptedException ex) {
-                    throw new RuntimeException(ex);
-                }
-            } else {
-                handleVanillaSpawnerBreak(e, clickedBlock, spawnerDropChance);
+
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner spawner = spawnerOptional.get();
+            try {
+                handleOwnedSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
+            } catch (ExecutionException | InterruptedException ex) {
+                throw new RuntimeException(ex);
             }
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error handling spawner break: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        });
+        } else {
+            handleVanillaSpawnerBreak(e, clickedBlock, spawnerDropChance);
+        }
     }
 
     private void handleOwnedSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) throws ExecutionException, InterruptedException {
-        Main.database.getSpawnerOwnerUuid(clickedBlock).thenAccept(ownerUuid -> {
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner spawner = spawnerOptional.get();
+            String ownerUuid = spawner.getOwnerUuid();
             if (ownerUuid.equalsIgnoreCase(player.getUniqueId().toString()) || playerHasBreakAllPermission(player)) {
                 processSpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
             } else {
                 handleNotOwner(e, clickedBlock, player, hologramsEnabled);
             }
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error retrieving spawner owner UUID: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        }).handle((result, exception) -> {
-            if (exception != null) {
-                if (exception instanceof ExecutionException || exception instanceof InterruptedException) {
-                    Main.getPlugin().getLogger().severe("Error handling spawner break: " + exception.getMessage());
-                    e.setCancelled(true);
-                }
-            }
-            return result;
-        });
+        }
     }
 
 
@@ -103,17 +92,16 @@ public class SpawnerBreakListener implements Listener {
             return;
         }
 
-        Main.database.getSpawnerLevel(clickedBlock).thenAccept(spawnerLevel -> {
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner spawner = spawnerOptional.get();
+            int spawnerLevel = spawner.getLevel();
             if (spawnerLevel == 1) {
                 handleLevel1SpawnerBreak(e, clickedBlock, player, hologramsEnabled, spawnerDropChance);
             } else if (spawnerLevel > 1) {
                 handleHigherLevelSpawnerBreak(e, clickedBlock, player, spawnerLevel, hologramsEnabled, spawnerDropChance);
             }
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error retrieving spawner level: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        });
+        }
     }
 
     private void handleNoSilkTouch(BlockBreakEvent e, Block clickedBlock, Player player) {
@@ -127,18 +115,17 @@ public class SpawnerBreakListener implements Listener {
     }
 
     private void handleLevel1SpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
-        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner ancSpawner = spawnerOptional.get();
+            String spawnerType = ancSpawner.getSpawnerType();
             ItemStack spawner = Main.getPlugin().getSpawner(spawnerType);
             removeHologramIfExists(hologramsEnabled, clickedBlock);
             clickedBlock.setType(Material.AIR);
             Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> Main.database.breakSpawner(player, clickedBlock), 1);
             dropSpawnerOrAddToInventory(clickedBlock, player, spawner, spawnerDropChance);
             Main.getPlugin().sendMessage(player, "brokeSpawner", new String[]{spawner.getItemMeta().getDisplayName()});
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error handling level 1 spawner break: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        });
+        }
     }
 
     private void handleHigherLevelSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, int spawnerLevel, boolean hologramsEnabled, int spawnerDropChance) {
@@ -150,7 +137,10 @@ public class SpawnerBreakListener implements Listener {
     }
 
     private void handleSneakingHigherLevelSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, int spawnerLevel, boolean hologramsEnabled, int spawnerDropChance) {
-        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner ancSpawner = spawnerOptional.get();
+            String spawnerType = ancSpawner.getSpawnerType();
             ItemStack spawner = Main.getPlugin().getSpawner(spawnerType);
             assert spawner != null;
             spawner.setAmount(1);
@@ -160,15 +150,14 @@ public class SpawnerBreakListener implements Listener {
             dropMultipleSpawners(clickedBlock, player, spawner, spawnerLevel - 1, spawnerDropChance);
             Main.getPlugin().sendMessage(player, "brokeAllLevels", new String[]{spawner.getItemMeta().getDisplayName()});
             SpawnerHologram_General.updateSpawnerHologram(clickedBlock, Main.database.getHologramName(clickedBlock));
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error handling sneaking higher level spawner break: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        });
+        }
     }
 
     private void handleNormalHigherLevelSpawnerBreak(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled, int spawnerDropChance) {
-        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner ancSpawner = spawnerOptional.get();
+            String spawnerType = ancSpawner.getSpawnerType();
             ItemStack spawner = Main.getPlugin().getSpawner(spawnerType);
             Main.database.reduceLevelBy1(player, clickedBlock);
             clickedBlock.getDrops().clear();
@@ -176,21 +165,16 @@ public class SpawnerBreakListener implements Listener {
             dropSpawnerOrAddToInventory(clickedBlock, player, spawner, spawnerDropChance);
             Main.getPlugin().sendMessage(player, "brokeWithLevels", new String[]{spawner.getItemMeta().getDisplayName()});
             SpawnerHologram_General.updateSpawnerHologram(clickedBlock, Main.database.getHologramName(clickedBlock));
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error handling normal higher level spawner break: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        });
+        }
     }
 
     private void handleNotOwner(BlockBreakEvent e, Block clickedBlock, Player player, boolean hologramsEnabled) {
-        Main.database.getSpawnerType(clickedBlock).thenAccept(spawnerType -> {
+        Optional<ancSpawner> spawnerOptional = new SpawnerManager().getSpawner(clickedBlock.getLocation());
+        if (spawnerOptional.isPresent()) {
+            ancSpawner ancSpawner = spawnerOptional.get();
+            String spawnerType = ancSpawner.getSpawnerType();
             Main.getPlugin().sendMessage(player, "notTheOwner", new String[]{Main.getPlugin().getSpawner(spawnerType).getItemMeta().getDisplayName()});
-        }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error handling not owner: " + ex.getMessage());
-            e.setCancelled(true);
-            return null;
-        });
+        }
     }
 
     private void handleVanillaSpawnerBreak(BlockBreakEvent e, Block clickedBlock, int spawnerDropChance) {
