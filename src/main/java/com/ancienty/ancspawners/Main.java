@@ -78,8 +78,8 @@ public final class Main extends JavaPlugin implements Listener {
         Metrics metrics = new Metrics(this, pluginId);
 
         // Licensing (DISABLED FOR SPIGOTMC)
-        /*Utils utils = new Utils();
-        utils.checkLicense();*/
+        Utils utils = new Utils();
+        utils.checkLicense();
 
         getLogger().info("Creating/reading data files.");
         // Creation of database:
@@ -89,7 +89,6 @@ public final class Main extends JavaPlugin implements Listener {
 
         try {createLangFiles();} catch (IOException e) {throw new RuntimeException(e);}
         getLogger().info("Registering events.");
-        getServer().getPluginManager().registerEvents(new SpawnerManager(), this);
         getServer().getPluginManager().registerEvents(new SpawnerPlaceListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerBreakListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerSpawnListener(), this);
@@ -102,10 +101,6 @@ public final class Main extends JavaPlugin implements Listener {
         new SpawnerCommand();
 
         storageEnabled = lang.getString("menu.storage.gui").equalsIgnoreCase("true");
-
-        // Spawner loading part.
-        new SpawnerManager().loadSpawners();
-
 
         // Update checker.
         new UpdateChecker().checkForUpdates();
@@ -440,6 +435,9 @@ public final class Main extends JavaPlugin implements Listener {
             Random random = new Random();
             int xpChance = yamlConfiguration.getInt("drops.xpDropChance");
             String xpAmountRange = yamlConfiguration.getString("drops.xpDrops");
+            if (xpAmountRange.equalsIgnoreCase("0-0")) {
+                return 0;
+            }
             String[] splitted = xpAmountRange.split("-");
             splitted[0] = splitted[0].replace("-", "");
             splitted[1] = splitted[1].replace("-", "");

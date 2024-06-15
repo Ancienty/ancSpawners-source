@@ -9,6 +9,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.entity.SlimeSplitEvent;
 import org.bukkit.event.entity.SpawnerSpawnEvent;
 import org.bukkit.inventory.ItemStack;
@@ -260,11 +261,14 @@ public class SpawnerSpawnListener implements Listener {
 
         if (entityLinkToSpawners.containsKey(parentUUID)) {
             Block block = entityLinkToSpawners.get(parentUUID);
-            for (Entity child : entity.getWorld().getNearbyEntities(entity.getLocation(), 1, 1, 1)) {
-                if (child instanceof Slime && !entityLinkToSpawners.containsKey(child.getUniqueId())) {
-                    entityLinkToSpawners.put(child.getUniqueId(), block);
+
+            Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+                for (Entity child : entity.getWorld().getNearbyEntities(entity.getLocation(), 3, 3, 3)) {
+                    if (child instanceof Slime && !entityLinkToSpawners.containsKey(child.getUniqueId())) {
+                        entityLinkToSpawners.put(child.getUniqueId(), block);
+                    }
                 }
-            }
+            }, 2);
         }
     }
 
@@ -293,7 +297,13 @@ public class SpawnerSpawnListener implements Listener {
                 int spawnerXP = storedXPFuture.join();
 
                 handleEntityDeath(e, block, entity, entityLocation, world, entityDrops, customLootTable, droppedXP, spawnerLevel, storageLimit, spawnerXP);
-                entityLinkToSpawners.remove(entityUUID);
+                double delay = 0;
+                if (entity instanceof Slime || entity.getType().equals(EntityType.MAGMA_CUBE)) {
+                    delay = 40;
+                }
+                Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
+                    entityLinkToSpawners.remove(entityUUID);
+                }, (long) delay);
             }).exceptionally(ex -> {
                 Main.getPlugin().getLogger().log(Level.SEVERE, "Error processing entity death event", ex);
                 return null;

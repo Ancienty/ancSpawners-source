@@ -5,7 +5,7 @@
 
     <groupId>com.ancienty</groupId>
     <artifactId>ancSpawners</artifactId>
-    <version>2.1.13</version>
+    <version>2.1.14-licensed</version>
     <packaging>jar</packaging>
 
     <name>ancSpawners</name>
@@ -172,7 +172,7 @@
         <dependency>
             <groupId>de.tr7zw</groupId>
             <artifactId>item-nbt-api-plugin</artifactId>
-            <version>2.12.4</version>
+            <version>2.13.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

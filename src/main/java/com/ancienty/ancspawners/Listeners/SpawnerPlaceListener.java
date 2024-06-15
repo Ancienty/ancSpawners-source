@@ -49,7 +49,6 @@ public class SpawnerPlaceListener implements Listener {
             CreatureSpawner block = (CreatureSpawner) e.getBlockPlaced().getState();
             configureSpawner(e, block, spawnerType);
         }).exceptionally(ex -> {
-            Main.getPlugin().getLogger().severe("Error checking or deleting existing spawner: " + ex.getMessage());
             e.setCancelled(true);
             return null;
         });
@@ -111,17 +110,15 @@ public class SpawnerPlaceListener implements Listener {
         boolean autoKill = Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.enabled");
         boolean forceAutoKill = Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.force");
 
-        Bukkit.getScheduler().runTaskLater(Main.getPlugin(), () -> {
-            if (block.getWorld().getBlockAt(block.getLocation()).getType().equals(block.getType())) {
-                Main.database.placeSpawner(e.getPlayer(), e.getBlockPlaced(), spawnerMode, spawnerType);
-                if (autoKill && forceAutoKill) {
-                    Main.database.enableAutoKill(e.getPlayer(), e.getBlockPlaced());
-                }
-
-                SpawnerHologram hologram = new SpawnerHologram_General();
-                hologram.createHologramPlace(e.getPlayer(), e.getBlockPlaced());
+        if (block.getWorld().getBlockAt(block.getLocation()).getType().equals(block.getType())) {
+            Main.database.placeSpawner(e.getPlayer(), e.getBlockPlaced(), spawnerMode, spawnerType);
+            if (autoKill && forceAutoKill) {
+                Main.database.enableAutoKill(e.getPlayer(), e.getBlockPlaced());
             }
-        }, 1);
+
+            SpawnerHologram hologram = new SpawnerHologram_General();
+            hologram.createHologramPlace(e.getPlayer(), e.getBlockPlaced());
+        }
 
         Main.getPlugin().sendMessage(e.getPlayer(), "placedSpawner", new String[]{Main.getPlugin().getSpawner(spawnerType).getItemMeta().getDisplayName()});
     }
