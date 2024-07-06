@@ -6,6 +6,11 @@ import com.ancienty.ancspawners.Database.DatabaseTask;
 import com.ancienty.ancspawners.Database.SQLite;
 import com.ancienty.ancspawners.GUIs.FriendsGUI;
 import com.ancienty.ancspawners.Listeners.*;
+import com.ancienty.ancspawners.SpawnerKilling.DeathListener;
+import com.ancienty.ancspawners.SpawnerKilling.StatsListener;
+import com.ancienty.ancspawners.SpawnerManager.SpawnerManager;
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
+import com.ancienty.ancspawners.SpawnerManager.ancStorage;
 import com.ancienty.ancspawners.Utils.LootTablesCreator;
 import com.ancienty.ancspawners.Utils.Metrics;
 import com.ancienty.ancspawners.Utils.UpdateChecker;
@@ -53,10 +58,12 @@ public final class Main extends JavaPlugin implements Listener {
     public YamlConfiguration lang;
     private static Economy econ = null;
     private static Permission perms = null;
+    private SpawnerManager spawnerManager;
 
     public boolean storageEnabled;
     public static Database database;
     public HashMap<Player, Block> player_block_map = new HashMap<>();
+    private boolean license_invalid;
 
     @Override
     public void onEnable() {
@@ -79,7 +86,10 @@ public final class Main extends JavaPlugin implements Listener {
 
         // Licensing (DISABLED FOR SPIGOTMC)
         Utils utils = new Utils();
-        utils.checkLicense();
+        if (!utils.checkLicense()) {
+            license_invalid = true;
+            return;
+        }
 
         getLogger().info("Creating/reading data files.");
         // Creation of database:
@@ -89,18 +99,26 @@ public final class Main extends JavaPlugin implements Listener {
 
         try {createLangFiles();} catch (IOException e) {throw new RuntimeException(e);}
         getLogger().info("Registering events.");
+        getServer().getPluginManager().registerEvents(new SpawnerManager(), this);
+        getServer().getPluginManager().registerEvents(new StatsListener(), this);
+        getServer().getPluginManager().registerEvents(new DeathListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerPlaceListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerBreakListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerSpawnListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerClickListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerGUIListener(), this);
+        getServer().getPluginManager().registerEvents(new UpdateChecker(), this);
         try {getServer().getPluginManager().registerEvents(new FriendsGUI(null, null), this);} catch (ExecutionException | InterruptedException e) {throw new RuntimeException(e);}
         getLogger().info("ancSpawners has been enabled.");
 
-        // Spawner saving part.
+        // Spawner command registration.
         new SpawnerCommand();
 
         storageEnabled = lang.getString("menu.storage.gui").equalsIgnoreCase("true");
+
+        // Spawner loading to memory part.
+        spawnerManager = new SpawnerManager();
+        spawnerManager.loadSpawners();
 
         // Update checker.
         new UpdateChecker().checkForUpdates();
@@ -233,7 +251,7 @@ public final class Main extends JavaPlugin implements Listener {
                                     AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO); // Initialize with BigDecimal
                                     String finalSelect_parameters1 = select_parameters;
                                     items_list.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(Bukkit.getPlayer(UUID.fromString(finalSelect_parameters1.split("--")[1])), item);;
+                                        double price = Main.getPlugin().getPriceForItem(item);;
                                         BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
                                         total.updateAndGet(v -> v.add(itemTotal)); // Update with BigDecimal
                                     });
@@ -268,7 +286,7 @@ public final class Main extends JavaPlugin implements Listener {
 
                                     String finalSelect_parameters = select_parameters;
                                     itemsList.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(Bukkit.getPlayer(UUID.fromString(finalSelect_parameters.split("---")[1])), item);
+                                        double price = Main.getPlugin().getPriceForItem(item);
                                         BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
                                         total.updateAndGet(v -> v.add(itemTotal));
                                         totalSold.addAndGet(amount);
@@ -353,8 +371,14 @@ public final class Main extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
-        getLogger().warning("Shutdown detected, initializing force-save.");
-        database.closeHikariCP();
+        if (!license_invalid) {
+            getLogger().warning("Shutdown detected, initializing force-save.");
+            spawnerManager.saveSpawnersNow();
+        }
+    }
+
+    public SpawnerManager getSpawnerManager() {
+        return spawnerManager;
     }
 
     public void createLangFiles() throws IOException {
@@ -454,53 +478,52 @@ public final class Main extends JavaPlugin implements Listener {
 
     public void spawnerLevelUp(Player player, Block block) throws ExecutionException, InterruptedException {
         String playerUUID = player.getUniqueId().toString();
-        database.getSpawnerOwnerUuid(block).thenAccept(ownerUUID -> {
-            database.getSpawnerLevel(block).thenAccept(currentLevel -> {
-                if (ownerUUID.equalsIgnoreCase(playerUUID)) {
-                    database.getSpawnerType(block).thenAccept(type -> {
-                        ItemStack spawner = getSpawner(type);
-                        assert spawner != null;
-                        spawner.setAmount(1);
-                        int levelToAdd;
-                        ItemStack[] itemList = player.getInventory().getContents();
-                        // itemStack.setAmount(0);
-                        levelToAdd = Arrays.stream(itemList).filter(itemStack -> itemStack != null && itemStack.hasItemMeta()).filter(itemStack -> itemStack.getItemMeta().equals(spawner.getItemMeta())).mapToInt(ItemStack::getAmount).sum();
+        ancSpawner ancSpawner = spawnerManager.getSpawner(block.getWorld(), block.getLocation());
 
-                        ItemStack spawnerToGiveBack = spawner.clone();
-                        int maximumSpawnerLevel = getConfig().getInt("config.modules.spawner-level-limit.level-limit");
+        String ownerUUID = ancSpawner.getOwnerUUID();
+        int currentLevel = ancSpawner.getLevel();
+        String type = ancSpawner.getType();
+        if (ownerUUID.equalsIgnoreCase(playerUUID)) {
+            ItemStack spawner = getSpawner(type);
+            assert spawner != null;
+            spawner.setAmount(1);
+            int levelToAdd;
+            ItemStack[] itemList = player.getInventory().getContents();
+            // itemStack.setAmount(0);
+            levelToAdd = Arrays.stream(itemList).filter(itemStack -> itemStack != null && itemStack.hasItemMeta()).filter(itemStack -> itemStack.getItemMeta().equals(spawner.getItemMeta())).mapToInt(ItemStack::getAmount).sum();
 
-                        // 253 - 10 - 3
-                        int maximumToLevelUp = maximumSpawnerLevel - currentLevel;
-                        int removeAmount;
-                        if (maximumToLevelUp > 0) {
-                            removeAmount = Math.min(levelToAdd, maximumToLevelUp);
-                            ItemStack spawnerToRemove = spawner.clone();
-                            spawnerToRemove.setAmount(removeAmount);
+            ItemStack spawnerToGiveBack = spawner.clone();
+            int maximumSpawnerLevel = getConfig().getInt("config.modules.spawner-level-limit.level-limit");
 
-                            try {
-                                player.getInventory().removeItem(spawnerToRemove);
-                            } catch (IllegalArgumentException ignored) {
-                            }
-                            player.updateInventory();
+            // 253 - 10 - 3
+            int maximumToLevelUp = maximumSpawnerLevel - currentLevel;
+            int removeAmount;
+            if (maximumToLevelUp > 0) {
+                removeAmount = Math.min(levelToAdd, maximumToLevelUp);
+                ItemStack spawnerToRemove = spawner.clone();
+                spawnerToRemove.setAmount(removeAmount);
 
-                            if (levelToAdd > 0) {
-                                int new_level = currentLevel + removeAmount;
-                                database.updateLevel(block, new_level);
-                                sendMessage(player, "levelUpSuccessful", new String[]{String.valueOf(removeAmount)});
-                                SpawnerHologram_General.updateSpawnerHologram(block, database.getHologramName(block));
-                            } else {
-                                sendMessage(player, "noSpawnersFound", new String[]{});
-                            }
-
-                        } else {
-                            sendMessage(player, "spawnerMaxLevel", new String[]{});
-                        }
-                    });
-                } else {
-                    sendMessage(player, "notTheOwner", new String[]{});
+                try {
+                    player.getInventory().removeItem(spawnerToRemove);
+                } catch (IllegalArgumentException ignored) {
                 }
-            });
-        });
+                player.updateInventory();
+
+                if (levelToAdd > 0) {
+                    int new_level = currentLevel + removeAmount;
+                    ancSpawner.setLevel(new_level);
+                    sendMessage(player, "levelUpSuccessful", new String[]{String.valueOf(removeAmount)});
+                    SpawnerHologram_General.updateSpawnerHologram(block, database.getHologramName(block));
+                } else {
+                    sendMessage(player, "noSpawnersFound", new String[]{});
+                }
+
+            } else {
+                sendMessage(player, "spawnerMaxLevel", new String[]{});
+            }
+    } else {
+        sendMessage(player, "notTheOwner", new String[]{});
+    }
     }
 
     public ItemStack getSpawnerByEntity(String entityName) {
@@ -560,33 +583,14 @@ public final class Main extends JavaPlugin implements Listener {
 
     public void spawnerGiveXP(Player player, Block block) throws ExecutionException, InterruptedException {
         if (getConfig().getString("config.modules.permission-based-xp.enabled").equalsIgnoreCase("true")) {
-            database.getSpawnerOwnerUuid(block).thenAccept(owneruuid -> {
-               if (owneruuid.equalsIgnoreCase(player.getUniqueId().toString())) {
-                   database.getStoredXP(block).thenAccept(xp -> {
-                      if (xp != 0) {
-                          player.giveExp(xp);
-                          database.updateXP(block, 0);
-                          sendMessage(player, "tookXP", new String[]{String.valueOf(xp)});
-                          if (getConfig().getBoolean("config.modules.title-messages.xp-title")) {
-                              if (player.isOnline()) {
-                                  String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpTitle"));
-                                  String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpSubtitle"));
-                                  title = title.replace("{xp_gained}", String.valueOf(xp));
-                                  sub_title = sub_title.replace("{xp_gained}", String.valueOf(xp));
-                                  player.sendTitle(title, sub_title, 5, 30, 5);
-                              }
-                          }
-                      } else {
-                          sendMessage(player, "noXP", new String[]{});
-                      }
-                   });
-               }
-            });
-        } else {
-            database.getStoredXP(block).thenAccept(xp -> {
+
+            ancSpawner ancSpawner = spawnerManager.getSpawner(block.getWorld(), block.getLocation());
+            String owneruuid = ancSpawner.getOwnerUUID();
+            int xp = ancSpawner.getStorage().getStoredXp();
+            if (owneruuid.equalsIgnoreCase(player.getUniqueId().toString())) {
                 if (xp != 0) {
                     player.giveExp(xp);
-                    database.updateXP(block, 0);
+                    ancSpawner.getStorage().setStoredXp(0);
                     sendMessage(player, "tookXP", new String[]{String.valueOf(xp)});
                     if (getConfig().getBoolean("config.modules.title-messages.xp-title")) {
                         if (player.isOnline()) {
@@ -600,43 +604,63 @@ public final class Main extends JavaPlugin implements Listener {
                 } else {
                     sendMessage(player, "noXP", new String[]{});
                 }
-            });
+           }
+        } else {
+            ancSpawner ancSpawner = spawnerManager.getSpawner(block.getWorld(), block.getLocation());
+            int xp = ancSpawner.getStorage().getStoredXp();
+            if (xp != 0) {
+                player.giveExp(xp);
+                ancSpawner.getStorage().setStoredXp(0);
+                sendMessage(player, "tookXP", new String[]{String.valueOf(xp)});
+                if (getConfig().getBoolean("config.modules.title-messages.xp-title")) {
+                    if (player.isOnline()) {
+                        String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpTitle"));
+                        String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpSubtitle"));
+                        title = title.replace("{xp_gained}", String.valueOf(xp));
+                        sub_title = sub_title.replace("{xp_gained}", String.valueOf(xp));
+                        player.sendTitle(title, sub_title, 5, 30, 5);
+                    }
+                }
+            } else {
+                sendMessage(player, "noXP", new String[]{});
+            }
         }
     }
 
-    public void spawnerGetItem(Player player, Block block, String material, int amount) {
-        database.getSpawnerStoredByItem(block, XMaterial.valueOf(material).parseMaterial()).thenAccept(itemAmountInData -> {
-           int amountToGive;
-            if (itemAmountInData >= amount) {
-                amountToGive = amount;
-            } else {
-                amountToGive = itemAmountInData;
+    public void spawnerGetItem(Player player, ancSpawner spawner, String material, int amount) {
+
+        ancStorage storage = spawner.getStorage();
+        int itemAmountInData = storage.getStoredItem(XMaterial.valueOf(material).parseMaterial());
+        int amountToGive;
+        if (itemAmountInData >= amount) {
+            amountToGive = amount;
+        } else {
+            amountToGive = itemAmountInData;
+        }
+
+        if (amountToGive > 0) {
+
+            ItemStack itemToGive = new ItemStack(Material.valueOf(material));
+            itemToGive.setAmount(amountToGive);
+            HashMap<Integer, ItemStack> itemsFailedToAdd = player.getInventory().addItem(itemToGive);
+            if (!itemsFailedToAdd.isEmpty()) {
+                ItemStack item1 = itemsFailedToAdd.get(0);
+                int item1amount = item1.getAmount();
+
+                amountToGive -= item1amount;
             }
 
-            if (amountToGive > 0) {
+            itemAmountInData -= amountToGive;
+            sendMessage(player, "tookItems", new String[]{String.valueOf(amountToGive), String.valueOf(itemToGive.getType())});
 
-                ItemStack itemToGive = new ItemStack(Material.valueOf(material));
-                itemToGive.setAmount(amountToGive);
-                HashMap<Integer, ItemStack> itemsFailedToAdd = player.getInventory().addItem(itemToGive);
-                if (!itemsFailedToAdd.isEmpty()) {
-                    ItemStack item1 = itemsFailedToAdd.get(0);
-                    int item1amount = item1.getAmount();
-
-                    amountToGive -= item1amount;
-                }
-
-                itemAmountInData -= amountToGive;
-                sendMessage(player, "tookItems", new String[]{String.valueOf(amountToGive), String.valueOf(itemToGive.getType())});
-
-                database.updateStorage(block, XMaterial.valueOf(material).parseMaterial(), itemAmountInData);
-            } else {
-                sendMessage(player, "noItems", new String[]{});
-            }
-        });
+            storage.setStoredItem(XMaterial.valueOf(material).parseMaterial(), itemAmountInData);
+        } else {
+            sendMessage(player, "noItems", new String[]{});
+        }
     }
 
 
-    public double getPriceForItem(Player player, String item) {
+    public double getPriceForItem(String item) {
         String priceProvider = getConfig().getString("itemPrices.priceProvider");
         double price = 0;
         if (priceProvider.equalsIgnoreCase("custom")) {
@@ -659,75 +683,73 @@ public final class Main extends JavaPlugin implements Listener {
         return multiplier;
     }
 
-    public CompletableFuture<String> getStorageBar(Block block) {
-        CompletableFuture<String> returnThis = new CompletableFuture<>();
+    public String getStorageBarOfItem(String itemName, ancSpawner spawner) {
+        int storageLimit = spawner.getStorageLimit();
+        int storedItemAmount = spawner.getStorage().getStoredItem(XMaterial.valueOf(itemName).parseMaterial());
+        StringBuilder returnText = new StringBuilder();
 
-        // Retrieve storage limit and stored items in parallel
-        CompletableFuture<Integer> storageLimitFuture = Main.database.getStorageLimit(block);
-        CompletableFuture<List<String>> storedItemsFuture = Main.database.getStoredItems(block);
-
-        // Combine the results of the parallel operations
-        CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(storageLimitFuture, storedItemsFuture);
-
-        combinedFuture.thenAcceptAsync(voidResult -> {
-            try {
-                int storageLimit = storageLimitFuture.get();
-                List<String> storedItems = storedItemsFuture.get();
-
-                if (storedItems.isEmpty()) {
-                    // If no items are stored, return an empty storage bar
-                    String returnText = "&f☰☰☰☰☰☰☰☰☰☰";
-                    returnText = ChatColor.translateAlternateColorCodes('&', returnText);
-                    returnThis.complete(returnText);
-                    return;
-                }
-
-                int totalStorageLimit = storageLimit * storedItems.size();
-                AtomicInteger totalStoredItems = new AtomicInteger();
-
-                // Use another CompletableFuture to handle the nested database calls for each item
-                List<CompletableFuture<Void>> itemFutures = new ArrayList<>();
-                for (String item : storedItems) {
-                    CompletableFuture<Void> itemFuture = Main.database.getSpawnerStoredByItem(block, XMaterial.valueOf(item).parseMaterial())
-                            .thenAccept(totalStoredItems::addAndGet);
-                    itemFutures.add(itemFuture);
-                }
-
-                // Wait for all item futures to complete
-                CompletableFuture<Void> allItemsFuture = CompletableFuture.allOf(itemFutures.toArray(new CompletableFuture[0]));
-                allItemsFuture.thenAcceptAsync(itemVoidResult -> {
-                    double division = (double) totalStoredItems.get() / totalStorageLimit;
-                    int amountOfBars = (int) Math.floor((division * 10));
-                    int remainderBars = 10 - amountOfBars;
-                    StringBuilder builder = new StringBuilder();
-
-                    for (int i = 0; i < amountOfBars; i++) {
-                        builder.append("&a☰");
-                    }
-                    for (int i = 0; i < remainderBars; i++) {
-                        builder.append("&f☰");
-                    }
-                    String returnText = builder.toString();
-
-                    if (amountOfBars == 10) {
-                        returnText = returnText.replace("&a", "&4");
-                    } else if (amountOfBars > 8) {
-                        returnText = returnText.replace("&a", "&c");
-                    } else if (amountOfBars > 6) {
-                        returnText = returnText.replace("&a", "&6");
-                    } else if (amountOfBars > 4) {
-                        returnText = returnText.replace("&a", "&e");
-                    }
-
-                    returnText = ChatColor.translateAlternateColorCodes('&', returnText);
-                    returnThis.complete(returnText);
-                });
-            } catch (Exception e) {
-                returnThis.completeExceptionally(e);
+        if (storedItemAmount == 0) {
+            returnText.append("&f☰☰☰☰☰☰☰☰☰☰");
+            return ChatColor.translateAlternateColorCodes('&', returnText.toString());
+        } else {
+            double division = (double) storedItemAmount / storageLimit;
+            int amountOfBars = (int) Math.floor((division * 10));
+            int remainderBars = 10 - amountOfBars;
+            for (int i = 0; i < amountOfBars; i++) {
+                returnText.append("&a☰");
             }
-        });
+            for (int i = 0; i < remainderBars; i++) {
+                returnText.append("&f☰");
+            }
+            String returnValue = returnText.toString();
 
-        return returnThis;
+            if (amountOfBars == 10) {
+                returnValue = returnValue.replace("&a", "&4");
+            } else if (amountOfBars > 8) {
+                returnValue = returnValue.replace("&a", "&c");
+            } else if (amountOfBars > 6) {
+                returnValue = returnValue.replace("&a", "&6");
+            } else if (amountOfBars > 4) {
+                returnValue = returnValue.replace("&a", "&e");
+            }
+            return ChatColor.translateAlternateColorCodes('&', returnValue);
+        }
+    }
+
+    public String getStorageBar(Block block) {
+        ancSpawner spawner = getSpawnerManager().getSpawner(block.getWorld(), block.getLocation());
+        int storageLimit = spawner.getStorageLimit();
+        int storedItemAmount = spawner.getStorage().getTotalStored();
+        HashMap<Material, Integer> storedItems = spawner.getStorage().getStorage();
+        StringBuilder returnText = new StringBuilder();
+
+        if (storedItemAmount == 0) {
+            returnText.append("&f☰☰☰☰☰☰☰☰☰☰");
+            return ChatColor.translateAlternateColorCodes('&', returnText.toString());
+        } else {
+            int totalStorageLimit = storageLimit * storedItems.size();
+            double division = (double) storedItemAmount / totalStorageLimit;
+            int amountOfBars = (int) Math.floor((division * 10));
+            int remainderBars = 10 - amountOfBars;
+            for (int i = 0; i < amountOfBars; i++) {
+                returnText.append("&a☰");
+            }
+            for (int i = 0; i < remainderBars; i++) {
+                returnText.append("&f☰");
+            }
+            String returnValue = returnText.toString();
+
+            if (amountOfBars == 10) {
+                returnValue = returnValue.replace("&a", "&4");
+            } else if (amountOfBars > 8) {
+                returnValue = returnValue.replace("&a", "&c");
+            } else if (amountOfBars > 6) {
+                returnValue = returnValue.replace("&a", "&6");
+            } else if (amountOfBars > 4) {
+                returnValue = returnValue.replace("&a", "&e");
+            }
+            return ChatColor.translateAlternateColorCodes('&', returnValue);
+        }
     }
 
 

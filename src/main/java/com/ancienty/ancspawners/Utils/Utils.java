@@ -9,6 +9,8 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.URL;
 import java.util.Enumeration;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.ancienty.ancspawners.Main;
 import org.bukkit.Bukkit;
@@ -17,45 +19,82 @@ import org.json.JSONObject;
 
 public class Utils {
 
-    private static final String API_URL = "https://ancplugins.com/app/api/license.php?product=1&ip=";
+    private static final String API_URL = "http://141.11.109.225:5000/check_license?ip=";
+    private static final String PLUGIN_NAME = "ancspawners";
 
-    public void checkLicense() {
+    public boolean checkLicense() {
         try {
             String localIPAddress = getLocalIPAddress();
             if (localIPAddress == null) {
-                Bukkit.getConsoleSender().sendMessage("IP Adresi belirlenemedi.");
-                return;
+                Bukkit.getConsoleSender().sendMessage("Could not determine the local IP address.");
+                return false;
             }
 
-            JSONObject response = sendGET(API_URL + localIPAddress);
-
-            if (response.getBoolean("status")) {
-                Bukkit.getConsoleSender().sendMessage("Lisans bulundu!");
-                Bukkit.getConsoleSender().sendMessage("Plugin aktif!");
-            } else {
-                Bukkit.getLogger().severe("Lisans bulunamadı, sunucu kapatılıyor.");
-                Bukkit.getScheduler().cancelTasks(Main.getPlugin());
-                Bukkit.shutdown();
+            String externalIPAddress = getExternalIPAddress();
+            if (externalIPAddress == null) {
+                Bukkit.getConsoleSender().sendMessage("Could not determine the external IP address.");
+                return false;
             }
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
+
+            String urlString = API_URL + externalIPAddress + "&plugin=" + PLUGIN_NAME;
+            Logger logger = Main.getPlugin().getLogger();
+            logger.info("(License) - License IP: " + externalIPAddress); // Log external IP
+
+            try {
+                JSONObject response = sendGET(urlString);
+
+                String status = response.getString("status");
+                String discordid = response.getString("discordid");
+
+                if ("valid".equals(status)) {
+                    logger.info("(License) - License verified, plugin is activated.");
+                    logger.info("(License) - Discord ID: " + discordid);
+                    return true;
+                } else {
+                    logger.severe("License not found for this IP address, shutting down the server.");
+                    Bukkit.getScheduler().cancelTasks(Main.getPlugin());
+                    Bukkit.shutdown();
+                    return false;
+                }
+            } catch (IOException | JSONException e) {
+                logger.log(Level.SEVERE, "Error checking license: ", e);
+                Bukkit.getConsoleSender().sendMessage("An error occurred while checking the license. Please try again later.");
+            }
+
+        } catch (SocketException e) {
+            Bukkit.getConsoleSender().sendMessage("Error obtaining network interfaces.");
+        }
+        return false;
+    }
+
+    private String getExternalIPAddress() {
+        try {
+            URL whatismyip = new URL("http://checkip.amazonaws.com");
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                    whatismyip.openStream()));
+
+            String ip = in.readLine();
+            return ip;
+        } catch (IOException e) {
+            Logger logger = Main.getPlugin().getLogger();
+            logger.log(Level.SEVERE, "Error fetching external IP address: ", e);
+            return null;
         }
     }
 
     private String getLocalIPAddress() throws SocketException {
-        Enumeration interfaces = NetworkInterface.getNetworkInterfaces();
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while (interfaces.hasMoreElements()) {
-            NetworkInterface iface = (NetworkInterface) interfaces.nextElement();
+            NetworkInterface iface = interfaces.nextElement();
             if (iface.isLoopback() || !iface.isUp()) {
                 continue;
             }
-            Enumeration addresses = iface.getInetAddresses();
+            Enumeration<InetAddress> addresses = iface.getInetAddresses();
             while (addresses.hasMoreElements()) {
-                InetAddress addr = (InetAddress) addresses.nextElement();
-                if (addr.isLinkLocalAddress() || addr.isLoopbackAddress() || addr.isMulticastAddress()) {
-                    continue;
+                InetAddress addr = addresses.nextElement();
+                if (!addr.isLoopbackAddress() && !addr.isLinkLocalAddress() && !addr.isMulticastAddress()) {
+                    return addr.getHostAddress();
                 }
-                return addr.getHostAddress();
             }
         }
         return null;
@@ -71,7 +110,7 @@ public class Utils {
         if (responseCode == HttpURLConnection.HTTP_OK) {
             BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
             String inputLine;
-            StringBuffer response = new StringBuffer();
+            StringBuilder response = new StringBuilder();
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }

@@ -1,26 +1,20 @@
 package com.ancienty.ancspawners.GUIs;
 
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
 import com.cryptomorin.xseries.XMaterial;
-import eu.decentsoftware.holograms.api.DHAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.UUID;
 
 public class MainGUI {
     private Inventory inventory = null;
@@ -42,77 +36,53 @@ public class MainGUI {
 
     public void initializeItems() {
         if (block != null) {
-            Main.database.getSpawnerOwner(block).thenAccept(owner -> {
-                Main.database.getSpawnerType(block).thenAccept(type -> {
-                    Main.database.getSpawnerMode(block).thenAccept(mode -> {
-                        Main.database.getSpawnerTotalStored(block).thenAccept(total_stored -> {
-                            Main.database.getStoredXP(block).thenAccept(total_xp -> {
-                                Main.database.getSpawnerLevel(block).thenAccept(level -> {
-                                    Main.database.getSpawnerMoney(player, block).thenAccept(money -> {
-                                        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-                                            for (String configKey : Main.getPlugin().lang.getConfigurationSection("menu").getKeys(false)) {
-                                                if (!configKey.equalsIgnoreCase("menuName") || !configKey.equalsIgnoreCase("menuRows") || !configKey.equalsIgnoreCase("fillItem")) {
-                                                    if (Main.getPlugin().lang.getBoolean("menu." + configKey + ".gui")) {
-                                                        int slot = Main.getPlugin().lang.getInt("menu." + configKey + ".slot");
-                                                        ItemStack material;
-                                                        if (!Main.getPlugin().lang.getString("menu." + configKey + ".material").startsWith("head-")) {
-                                                            material = XMaterial.valueOf(Main.getPlugin().lang.getString("menu." + configKey + ".material")).parseItem();
-                                                        } else {
-                                                            material = Main.getHead(Main.getPlugin().lang.getString("menu." + configKey + ".material").split("head-")[1]);
-                                                        }
+            ancSpawner spawner = Main.getPlugin().getSpawnerManager().getSpawner(block.getWorld(), block.getLocation());
+            if (spawner != null) {
+                Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+                    String owner = spawner.getOwnerUUID();
+                    String type = spawner.getType();
+                    String mode = spawner.getMode();
+                    int total_stored = spawner.getStorage().getTotalStored();
+                    int total_xp = spawner.getStorage().getStoredXp();
+                    int level = spawner.getLevel();
+                    double money = spawner.getStorage().getMoney(player);
 
-                                                        if (!((configKey.equalsIgnoreCase("auto-kill") || configKey.equalsIgnoreCase("exp")) && mode.equalsIgnoreCase("item"))) {
-                                                            String name = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("menu." + configKey + ".name"));
-                                                            List<String> lore = Main.getPlugin().lang.getStringList("menu." + configKey + ".lore");
-                                                            List<String> real_lore = new ArrayList<>();
-                                                            lore.forEach(text -> {
-                                                                text = text.replace("{type}", type);
-                                                                text = text.replace("{level}", String.valueOf(level));
-                                                                text = text.replace("{owner}", owner);
-                                                                text = text.replace("{amount}", String.valueOf(total_stored));
-                                                                text = text.replace("{multiplier}", String.valueOf(Main.getPlugin().getPlayerMultiplier(player)));
-                                                                text = text.replace("{experience}", String.valueOf(total_xp));
-                                                                text = text.replace("{money}", String.valueOf(money));
-                                                                text = ChatColor.translateAlternateColorCodes('&', text);
-                                                                real_lore.add(text);
-                                                            });
+                    for (String configKey : Main.getPlugin().lang.getConfigurationSection("menu").getKeys(false)) {
+                        if (!configKey.equalsIgnoreCase("menuName") && !configKey.equalsIgnoreCase("menuRows") && !configKey.equalsIgnoreCase("fillItem")) {
+                            if (Main.getPlugin().lang.getBoolean("menu." + configKey + ".gui")) {
+                                int slot = Main.getPlugin().lang.getInt("menu." + configKey + ".slot");
+                                ItemStack material;
+                                if (!Main.getPlugin().lang.getString("menu." + configKey + ".material").startsWith("head-")) {
+                                    material = XMaterial.valueOf(Main.getPlugin().lang.getString("menu." + configKey + ".material")).parseItem();
+                                } else {
+                                    material = Main.getHead(Main.getPlugin().lang.getString("menu." + configKey + ".material").split("head-")[1]);
+                                }
 
-                                                            addItem(slot, material, name, real_lore);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        });
-
-                                        fillerItems();
-                                    }).exceptionally(throwable -> {
-                                        Main.getPlugin().getLogger().severe("Error getting spawner money." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                                        return null;
+                                if (!((configKey.equalsIgnoreCase("auto-kill") || configKey.equalsIgnoreCase("exp")) && mode.equalsIgnoreCase("item"))) {
+                                    String name = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("menu." + configKey + ".name"));
+                                    List<String> lore = Main.getPlugin().lang.getStringList("menu." + configKey + ".lore");
+                                    List<String> real_lore = new ArrayList<>();
+                                    lore.forEach(text -> {
+                                        text = text.replace("{type}", type);
+                                        text = text.replace("{level}", String.valueOf(level));
+                                        text = text.replace("{owner}", Bukkit.getOfflinePlayer(UUID.fromString(owner)).getName());
+                                        text = text.replace("{amount}", String.valueOf(total_stored));
+                                        text = text.replace("{multiplier}", String.valueOf(Main.getPlugin().getPlayerMultiplier(player)));
+                                        text = text.replace("{experience}", String.valueOf(total_xp));
+                                        text = text.replace("{money}", String.valueOf(money));
+                                        text = ChatColor.translateAlternateColorCodes('&', text);
+                                        real_lore.add(text);
                                     });
-                                }).exceptionally(throwable -> {
-                                    Main.getPlugin().getLogger().severe("Error getting spawner level." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                                    return null;
-                                });
-                            }).exceptionally(throwable -> {
-                                Main.getPlugin().getLogger().severe("Error getting spawner stored xp." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                                return null;
-                            });
-                        }).exceptionally(throwable -> {
-                            Main.getPlugin().getLogger().severe("Error getting spawner total stored items." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                            return null;
-                        });
-                    }).exceptionally(throwable -> {
-                        Main.getPlugin().getLogger().severe("Error getting spawner mode." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                        return null;
-                    });
-                }).exceptionally(throwable -> {
-                    Main.getPlugin().getLogger().severe("Error getting spawner type." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                    return null;
+
+                                    addItem(slot, material, name, real_lore);
+                                }
+                            }
+                        }
+                    }
+
+                    fillerItems();
                 });
-            }).exceptionally(throwable -> {
-                Main.getPlugin().getLogger().severe("Error getting spawner owner." + throwable.getClass().getName() + ": " + throwable.getMessage());
-                return null;
-            });
+            }
         }
     }
 
@@ -133,9 +103,7 @@ public class MainGUI {
     public void fillerItems() {
         Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
             if (block != null) {
-
                 if (Main.getPlugin().lang.get("menu.fillItem.material") != null && !Main.getPlugin().lang.getString("menu.fillItem.material").equalsIgnoreCase("AIR")) {
-
                     ItemStack fillerItem = XMaterial.valueOf(Main.getPlugin().lang.getString("menu.fillItem.material")).parseItem();
                     ItemMeta meta = fillerItem.getItemMeta();
                     String item_name = Main.getPlugin().lang.getString("menu.fillItem.name") != null ? ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("menu.fillItem.name")) : "no name";
@@ -157,5 +125,4 @@ public class MainGUI {
     public void openInventory() {
         player.openInventory(inventory);
     }
-
 }

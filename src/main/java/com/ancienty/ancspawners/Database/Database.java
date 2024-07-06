@@ -1,5 +1,6 @@
 package com.ancienty.ancspawners.Database;
 
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;

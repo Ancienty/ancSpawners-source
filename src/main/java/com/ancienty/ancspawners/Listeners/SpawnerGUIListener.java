@@ -3,6 +3,7 @@ package com.ancienty.ancspawners.Listeners;
 import com.ancienty.ancspawners.GUIs.FriendsGUI;
 import com.ancienty.ancspawners.GUIs.StorageGUI;
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
 import com.cryptomorin.xseries.XMaterial;
 import eu.decentsoftware.holograms.api.DHAPI;
 import org.bukkit.Bukkit;
@@ -19,11 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.ancienty.ancspawners.Listeners.SpawnerSpawnListener.spawnerAutoKillCheck;
-
 public class SpawnerGUIListener implements Listener {
 
-    HashMap<Player, Block> friendsAddCheckList = new HashMap<>();
+    HashMap<Player, ancSpawner> friendsAddCheckList = new HashMap<>();
 
     @EventHandler
     public void onSpawnerMenuClickEvent(InventoryClickEvent e) throws ExecutionException, InterruptedException {
@@ -37,7 +36,10 @@ public class SpawnerGUIListener implements Listener {
                 block = null;
                 player = null;
             }
-            if (block != null && player != null) {
+
+            ancSpawner spawner = Main.getPlugin().getSpawnerManager().getSpawner(block.getWorld(), block.getLocation());
+
+            if (spawner != null && player != null) {
                 int info_slot = -1;
                 int level_slot = -1;
                 int hologram_slot = -1;
@@ -84,34 +86,28 @@ public class SpawnerGUIListener implements Listener {
                         new StorageGUI(player, block);
                     } else if (e.getRawSlot() == xp_slot) {
                         Player player2 = (Player) e.getView().getPlayer();
-                        Main.database.getSpawnerMode(block).thenAccept(spawner_mode -> {
-                            if (spawner_mode.equalsIgnoreCase("entity")) {
-                                try {
-                                    Main.getPlugin().spawnerGiveXP(player2, block);
-                                } catch (ExecutionException | InterruptedException ex) {
-                                    ex.printStackTrace();
-                                }
-                                player2.closeInventory();
+                        if (spawner.getMode().equalsIgnoreCase("ENTITY")) {
+                            try {
+                                Main.getPlugin().spawnerGiveXP(player2, block);
+                            } catch (ExecutionException | InterruptedException ex) {
+                                ex.printStackTrace();
                             }
-                        });
+                            player2.closeInventory();
+                        }
                     } else if (e.getRawSlot() == friends_slot) {
                         e.getView().getPlayer().closeInventory();
                         new FriendsGUI(player, block);
                     } else if (e.getRawSlot() == autokill_slot) {
                         e.getView().getPlayer().closeInventory();
-                        spawnerAutoKillCheck.remove(block);
-                        Main.database.getSpawnerMode(block).thenAccept(spawner_mode -> {
-                            if (spawner_mode.equalsIgnoreCase("entity")) {
-                                Main.database.toggleAutoKill(block);
-                                Main.database.isAutoKillEnabled(block).thenAccept(autokill -> {
-                                    if (autokill) {
-                                        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> Main.getPlugin().sendMessage(player, "enabledAutoKill", new String[]{null}));
-                                    } else {
-                                        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> Main.getPlugin().sendMessage(player, "disabledAutoKill", new String[]{null}));
-                                    }
-                                });
+                        if (spawner.getMode().equalsIgnoreCase("ENTITY")) {
+                            if (spawner.getAutoKill()) {
+                                spawner.setAutoKill(!spawner.getAutoKill());
+                                Bukkit.getScheduler().runTask(Main.getPlugin(), () -> Main.getPlugin().sendMessage(player, "disabledAutoKill", new String[]{null}));
+                            } else {
+                                spawner.setAutoKill(!spawner.getAutoKill());
+                                Bukkit.getScheduler().runTask(Main.getPlugin(), () -> Main.getPlugin().sendMessage(player, "enabledAutoKill", new String[]{null}));
                             }
-                        });
+                        }
                     }
                 }
             }
@@ -124,19 +120,21 @@ public class SpawnerGUIListener implements Listener {
                 return;
             }
             Block block = Main.getPlugin().player_block_map.get((Player) e.getView().getPlayer());
+            ancSpawner spawner = Main.getPlugin().getSpawnerManager().getSpawner(block.getWorld(), block.getLocation());
             Material fillerItem = XMaterial.valueOf(Main.getPlugin().lang.getString("storageMenu.fillItem.material")).parseMaterial();
             if (e.getCurrentItem() != null && e.getCurrentItem().getType() != fillerItem) {
                 if (e.getSlot() == Main.getPlugin().lang.getInt("storageMenu.sellItem.slot")) {
-                    Main.database.spawnerSellAllItems((Player) e.getView().getPlayer(), block);
+                    Main.getEconomy().depositPlayer((Player) e.getView().getPlayer(), spawner.getStorage().getMoney((Player) e.getView().getPlayer()));
+                    spawner.getStorage().clearStorage();
                     e.getView().getPlayer().closeInventory();
                 } else {
                     if (e.getClick().isLeftClick()) {
                         String clickedItem = String.valueOf(e.getCurrentItem().getType());
-                        Main.getPlugin().spawnerGetItem((Player) e.getView().getPlayer(), block, clickedItem, 64);
+                        Main.getPlugin().spawnerGetItem((Player) e.getView().getPlayer(), spawner, clickedItem, 64);
                         e.getView().getPlayer().closeInventory();
                     } else if (e.getClick().isRightClick()) {
                         String clickedItem = String.valueOf(e.getCurrentItem().getType());
-                        Main.getPlugin().spawnerGetItem((Player) e.getView().getPlayer(), block, clickedItem, 2304);
+                        Main.getPlugin().spawnerGetItem((Player) e.getView().getPlayer(), spawner, clickedItem, 2304);
                         e.getView().getPlayer().closeInventory();
                     }
                 }
@@ -149,12 +147,13 @@ public class SpawnerGUIListener implements Listener {
                 return;
             }
             Block block = Main.getPlugin().player_block_map.get((Player) e.getView().getPlayer());
+            ancSpawner spawner = Main.getPlugin().getSpawnerManager().getSpawner(block.getWorld(), block.getLocation());
 
             Material fillerItem = XMaterial.valueOf(Main.getPlugin().lang.getString("friendsMenu.fillItem.material")).parseMaterial();
             if (e.getCurrentItem() != null && e.getCurrentItem().getType() != fillerItem) {
                 if (e.getSlot() == Main.getPlugin().lang.getInt("friendsMenu.addItem.slot")) {
                     if (!friendsAddCheckList.isEmpty() || !friendsAddCheckList.containsKey((Player) e.getView().getPlayer())) {
-                        friendsAddCheckList.put((Player) e.getView().getPlayer(), block);
+                        friendsAddCheckList.put((Player) e.getView().getPlayer(), spawner);
                         Main.getPlugin().sendMessage((Player) e.getView().getPlayer(), "addFriendMessage", new String[]{});
                         e.getView().getPlayer().closeInventory();
                     }
@@ -165,11 +164,8 @@ public class SpawnerGUIListener implements Listener {
                         friendUUID = ChatColor.stripColor(friendUUID);
                         friendUUID = friendUUID.replace("&8", "");
                         String finalFriendUUID = friendUUID;
-                        Main.database.getFriendsByUuid(block).thenAccept(allFriends -> {
-                            allFriends.remove(finalFriendUUID);
-                            Main.database.removeFriend(block, finalFriendUUID);
-                            Main.getPlugin().sendMessage((Player) e.getView().getPlayer(), "removedFriendFromSpawner", new String[]{});
-                        });
+                        spawner.removeFriend(finalFriendUUID);
+                        Main.getPlugin().sendMessage((Player) e.getView().getPlayer(), "removedFriendFromSpawner", new String[]{});
                         e.getView().getPlayer().closeInventory();
                     }
                 }
@@ -182,7 +178,7 @@ public class SpawnerGUIListener implements Listener {
     public void onPlayerMessageEvent(AsyncPlayerChatEvent e) {
         if (!friendsAddCheckList.isEmpty()) {
             if (friendsAddCheckList.containsKey(e.getPlayer())) {
-                Block block = friendsAddCheckList.get(e.getPlayer());
+                ancSpawner block = friendsAddCheckList.get(e.getPlayer());
                 Player playerToAdd = Bukkit.getPlayer(e.getMessage());
                 Player currentPlayer = e.getPlayer();
                 String message = e.getMessage();
@@ -196,12 +192,10 @@ public class SpawnerGUIListener implements Listener {
                             friendsAddCheckList.remove(currentPlayer);
                             return;
                         }
-                        Main.database.checkIfFriend(block, playerToAdd).thenAccept(boolean1 -> {
-                            if (!boolean1) {
-                                Main.database.addFriend(block, playerToAdd.getUniqueId().toString());
-                                Main.getPlugin().sendMessage(currentPlayer, "successfullyAddedFriend", new String[]{});
-                            }
-                        });
+                        if (block.isFriend(playerToAdd.getUniqueId().toString())) {
+                            block.addFriend(playerToAdd.getUniqueId().toString());
+                            Main.getPlugin().sendMessage(currentPlayer, "successfullyAddedFriend", new String[]{});
+                        }
                         friendsAddCheckList.remove(currentPlayer);
                     } else {
                         Main.getPlugin().sendMessage(currentPlayer, "playerNotFound", new String[]{});

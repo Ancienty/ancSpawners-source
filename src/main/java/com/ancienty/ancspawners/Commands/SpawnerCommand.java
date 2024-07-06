@@ -4,6 +4,7 @@ import com.ancienty.ancspawners.Main;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -68,9 +69,38 @@ public class SpawnerCommand extends Command {
             }
         }
 
-        else {
+        else if (sender instanceof ConsoleCommandSender) {
             // If sender is console
             ConsoleCommandSender console = (ConsoleCommandSender) sender;
+            if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
+                if (args.length > 2) {
+                    String playerName = args[1];
+                    String spawnerType = args[2];
+                    int spawnerAmount = 1;
+                    if (args.length > 3) {
+                        spawnerAmount = Integer.parseInt(args[3]);
+                    }
+
+                    ItemStack spawnerToGive = Main.getPlugin().getSpawner(spawnerType);
+                    if (spawnerToGive != null) {
+                        spawnerToGive.setAmount(spawnerAmount);
+
+                        Player playerToReceive = Bukkit.getPlayer(playerName);
+
+                        if (playerToReceive != null) {
+                            playerToReceive.getInventory().addItem(spawnerToGive);
+                            console.sendMessage("You've successfully given " + spawnerAmount + " of " + spawnerType + " to " + playerToReceive + ".");
+                            Main.getPlugin().sendMessage(playerToReceive, "receivedSpawners", new String[]{String.valueOf(spawnerAmount), Main.getPlugin().getSpawner(spawnerType).getItemMeta().getDisplayName()});
+                        } else {
+                            Main.getPlugin().getLogger().warning("Unable to give " + spawnerAmount + " of " + spawnerType + " to " + playerToReceive + ", player not found.");
+                        }
+                    } else {
+                        Main.getPlugin().getLogger().warning("Unable to give spawner! Does not exist: " + args[2]);
+                    }
+                }
+            }
+        } else if (sender instanceof RemoteConsoleCommandSender) {
+            RemoteConsoleCommandSender console = (RemoteConsoleCommandSender) sender;
             if (args.length > 0 && args[0].equalsIgnoreCase("give")) {
                 if (args.length > 2) {
                     String playerName = args[1];

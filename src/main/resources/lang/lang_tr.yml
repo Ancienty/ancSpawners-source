@@ -127,6 +127,7 @@ storageMenu:
     - "&7 adet bulunmakta."
     - ""
     - " &8• &7Depo limiti: &6{storage_limit}"
+    - " &8[{storage_bar}&8]"
     - ""
     - " &8• &764x almak için sol tıkla "
     - " &8• &7Envanterini doldurmak için sağ tıkla "

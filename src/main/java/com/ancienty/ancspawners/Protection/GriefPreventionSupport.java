@@ -2,14 +2,10 @@ package com.ancienty.ancspawners.Protection;
 
 import com.ancienty.ancspawners.Main;
 import me.ryanhamshire.GriefPrevention.Claim;
-import me.ryanhamshire.GriefPrevention.ClaimPermission;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import me.ryanhamshire.GriefPrevention.PlayerData;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 
 public class GriefPreventionSupport {
 

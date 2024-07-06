@@ -128,6 +128,7 @@ storageMenu:
     - "&7 of this item stored."
     - ""
     - " &8• &7Storage limit: &6{storage_limit}"
+    - " &8[{storage_bar}&8]"
     - ""
     - " &8• &7Left-click to take 64 "
     - " &8• &7Right-click to fill inventory "

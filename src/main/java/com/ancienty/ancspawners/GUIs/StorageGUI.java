@@ -1,6 +1,8 @@
 package com.ancienty.ancspawners.GUIs;
 
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
+import com.ancienty.ancspawners.SpawnerManager.ancStorage;
 import com.cryptomorin.xseries.XMaterial;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -12,10 +14,12 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class StorageGUI {
 
@@ -36,29 +40,26 @@ public class StorageGUI {
     }
 
     public CompletableFuture<Void> initializeItems() {
-        CompletableFuture<Double> spawnerMoneyFuture = Main.database.getSpawnerMoney(player, block);
-        CompletableFuture<List<String>> storedItemsFuture = Main.database.getStoredItems(block);
-        CompletableFuture<Integer> storageLimitFuture = Main.database.getStorageLimit(block);
-        CompletableFuture<String> spawnerTypeFuture = Main.database.getSpawnerType(block);
+        ancSpawner spawner = Main.getPlugin().getSpawnerManager().getSpawner(block.getWorld(), block.getLocation());
+        if (spawner != null) {
+            ancStorage storage = spawner.getStorage();
+            double spawnerMoney = storage.getMoney(player);
+            List<String> storedItems = storage.getStorage().keySet().stream().map(Material::name).collect(Collectors.toList());
+            int storageLimit = spawner.getStorageLimit();
+            String spawnerType = spawner.getType();
 
-        return CompletableFuture.allOf(spawnerMoneyFuture, storedItemsFuture, storageLimitFuture, spawnerTypeFuture)
-                .thenAcceptAsync(voidResult -> {
-                    try {
-                        Double spawnerMoney = spawnerMoneyFuture.get();
-                        List<String> storedItems = storedItemsFuture.get();
-                        int storageLimit = storageLimitFuture.get();
-                        String spawnerType = spawnerTypeFuture.get();
-
-                        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-                            setupSellItem(spawnerMoney, spawnerType);
-                            setupStoredItems(storedItems, storageLimit);
-                            fillerItems();
-                        });
-
-                    } catch (Exception e) {
-                        Main.getPlugin().getLogger().severe("Error initializing storage GUI: " + e.getMessage());
-                    }
+            return CompletableFuture.runAsync(() -> {
+                Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+                    setupSellItem(spawnerMoney, spawnerType);
+                    setupStoredItems(storedItems, storageLimit, storage);
+                    fillerItems();
                 });
+            });
+        } else {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            future.completeExceptionally(new Exception("Spawner not found for block: " + block));
+            return future;
+        }
     }
 
     private void setupSellItem(Double spawnerMoney, String spawnerType) {
@@ -85,8 +86,11 @@ public class StorageGUI {
         }
     }
 
-    private void setupStoredItems(List<String> storedItems, int storageLimit) {
+    private void setupStoredItems(List<String> storedItems, int storageLimit, ancStorage storage) {
         AtomicInteger storedItemSlot = new AtomicInteger();
+        DecimalFormat formatter = new DecimalFormat("#,###");
+
+        String formattedStorageLimit = formatter.format(storageLimit);
 
         storedItems.forEach(itemName -> {
             ItemStack storedItem = XMaterial.valueOf(itemName).parseItem();
@@ -95,18 +99,20 @@ public class StorageGUI {
             List<String> storedItemLore = Main.getPlugin().lang.getStringList("storageMenu.itemLores");
             List<String> storedItemLoreReal = new ArrayList<>();
 
-            Main.database.getSpawnerStoredByItem(block, storedItem.getType()).thenAccept(itemAmount -> {
-                for (String text : storedItemLore) {
-                    text = text.replace("{amount_type}", String.valueOf(itemAmount));
-                    text = text.replace("{storage_limit}", String.valueOf(storageLimit));
-                    storedItemLoreReal.add(ChatColor.translateAlternateColorCodes('&', text));
-                }
+            int itemAmount = storage.getStoredItem(storedItem.getType());
+            String formattedItemAmount = formatter.format(itemAmount);
 
-                itemMeta.setLore(storedItemLoreReal);
-                itemMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                storedItem.setItemMeta(itemMeta);
-                inventory.setItem(storedItemSlot.getAndIncrement(), storedItem);
-            });
+            for (String text : storedItemLore) {
+                text = text.replace("{amount_type}", formattedItemAmount);
+                text = text.replace("{storage_limit}", formattedStorageLimit);
+                text = text.replace("{storage_bar}", Main.getPlugin().getStorageBarOfItem(itemName, storage.getSpawner()));
+                storedItemLoreReal.add(ChatColor.translateAlternateColorCodes('&', text));
+            }
+
+            itemMeta.setLore(storedItemLoreReal);
+            itemMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            storedItem.setItemMeta(itemMeta);
+            inventory.setItem(storedItemSlot.getAndIncrement(), storedItem);
         });
     }
 

@@ -14,7 +14,7 @@ public class LootTablesCreator {
             plugin.saveResource("loottables" + File.separator + "example_zombie.yml", true);
         }
 
-        loottables_creator = new File(Main.getPlugin().getDataFolder(), File.separator + "loottables" + File.separator + "blaze.yml");
+        /*loottables_creator = new File(Main.getPlugin().getDataFolder(), File.separator + "loottables" + File.separator + "blaze.yml");
         if (!loottables_creator.exists()) {
             plugin.saveResource("loottables" + File.separator + "blaze.yml", true);
         }
@@ -82,7 +82,7 @@ public class LootTablesCreator {
         loottables_creator = new File(Main.getPlugin().getDataFolder(), File.separator + "loottables" + File.separator + "zombie.yml");
         if (!loottables_creator.exists()) {
             plugin.saveResource("loottables" + File.separator + "zombie.yml", true);
-        }
+        }*/
 
     }
 }

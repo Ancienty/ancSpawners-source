@@ -1,6 +1,7 @@
 package com.ancienty.ancspawners.Database;
 
 import com.ancienty.ancspawners.Main;
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -13,6 +14,7 @@ import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.ancienty.ancspawners.Main.getPermissions;
 
@@ -330,7 +332,7 @@ public class SQLite implements Database {
 
     @Override
     public void placeSpawner(Player player, Block block, String mode, String type) {
-        String query = "INSERT INTO spawners (world, location, uuid, mode, type, level, autokill) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT OR REPLACE INTO spawners (world, location, uuid, mode, type, level, autokill) VALUES (?, ?, ?, ?, ?, ?, ?)";
         DatabaseTask task = new DatabaseTask(query, new Object[]{block.getWorld().getName(), getLocation(block), player.getUniqueId().toString(), mode, type, 1, false}, null);
         operations_queue.add(task);
         notifyTask();

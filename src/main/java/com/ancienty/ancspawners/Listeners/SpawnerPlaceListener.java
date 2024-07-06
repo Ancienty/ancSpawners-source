@@ -5,6 +5,9 @@ import com.ancienty.ancspawners.Protection.GriefPreventionSupport;
 import com.ancienty.ancspawners.Protection.SSB2Support;
 import com.ancienty.ancspawners.Protection.TownySupport;
 import com.ancienty.ancspawners.Protection.WorldGuardSupport;
+import com.ancienty.ancspawners.SpawnerManager.SpawnerManager;
+import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
+import com.ancienty.ancspawners.SpawnerManager.ancStorage;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.ancienty.ancspawners.Versions.SpawnerNBT.SpawnerUpdate;
@@ -21,6 +24,8 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 
+import java.util.ArrayList;
+
 public class SpawnerPlaceListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
@@ -29,29 +34,26 @@ public class SpawnerPlaceListener implements Listener {
             return;
         }
 
-        Main.database.doesLocationHaveSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation()).thenAccept(doesSpawnerExist -> {
-            if (doesSpawnerExist) {
-                Main.database.deleteSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation());
-            }
+        // Check if the spawner already exists in the plugin's spawner manager
+        boolean doesSpawnerExist = Main.getPlugin().getSpawnerManager().getSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation()) != null;
+        if (doesSpawnerExist) {
+            Main.getPlugin().getSpawnerManager().removeSpawner(Main.getPlugin().getSpawnerManager().getSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation()));
+        }
 
-            if (!canPlaceSpawner(e)) {
-                e.setCancelled(true);
-                return;
-            }
-
-            String spawnerType = getSpawnerType(e);
-            if (spawnerType == null) {
-                Main.getPlugin().sendMessage(e.getPlayer(), "errorWithSpawner", new String[]{});
-                e.setCancelled(true);
-                return;
-            }
-
-            CreatureSpawner block = (CreatureSpawner) e.getBlockPlaced().getState();
-            configureSpawner(e, block, spawnerType);
-        }).exceptionally(ex -> {
+        if (!canPlaceSpawner(e)) {
             e.setCancelled(true);
-            return null;
-        });
+            return;
+        }
+
+        String spawnerType = getSpawnerType(e);
+        if (spawnerType == null) {
+            Main.getPlugin().sendMessage(e.getPlayer(), "errorWithSpawner", new String[]{});
+            e.setCancelled(true);
+            return;
+        }
+
+        CreatureSpawner block = (CreatureSpawner) e.getBlockPlaced().getState();
+        configureSpawner(e, block, spawnerType);
     }
 
     private boolean canPlaceSpawner(BlockPlaceEvent e) {
@@ -111,10 +113,9 @@ public class SpawnerPlaceListener implements Listener {
         boolean forceAutoKill = Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.force");
 
         if (block.getWorld().getBlockAt(block.getLocation()).getType().equals(block.getType())) {
-            Main.database.placeSpawner(e.getPlayer(), e.getBlockPlaced(), spawnerMode, spawnerType);
-            if (autoKill && forceAutoKill) {
-                Main.database.enableAutoKill(e.getPlayer(), e.getBlockPlaced());
-            }
+            ancSpawner spawner = new ancSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation(), 1, e.getPlayer().getUniqueId().toString(), spawnerType, spawnerMode, autoKill && forceAutoKill, 0);
+            Main.getPlugin().getSpawnerManager().addSpawner(spawner);
+            Main.getPlugin().getSpawnerManager().updatedSpawnerList.add(spawner);
 
             SpawnerHologram hologram = new SpawnerHologram_General();
             hologram.createHologramPlace(e.getPlayer(), e.getBlockPlaced());
