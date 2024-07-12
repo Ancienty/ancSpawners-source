@@ -30,37 +30,49 @@ public class ancStorage {
     }
 
     private void loadStorageFromDatabase(World world, Location location) {
-        try (Connection connection = SQLite.dataSource.getConnection()) {
-            String query = "SELECT * FROM storage WHERE world = ? AND location = ?";
-            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-                preparedStatement.setString(1, world.getName());
-                preparedStatement.setString(2, Main.getPlugin().getSpawnerManager().getLocationString(location));
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    while (resultSet.next()) {
-                        ItemStack item = XMaterial.valueOf(resultSet.getString("item")).parseItem();
-                        int amount = resultSet.getInt("amount");
-                        storage.put(item.getType(), amount);
-                    }
-                }
+        try {
+            connection = SQLite.dataSource.getConnection();
+            String query = "SELECT * FROM storage WHERE world = ? AND location = ?";
+            preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setString(1, world.getName());
+            preparedStatement.setString(2, Main.getPlugin().getSpawnerManager().getLocationString(location));
+            resultSet = preparedStatement.executeQuery();
+
+            while (resultSet.next()) {
+                ItemStack item = XMaterial.valueOf(resultSet.getString("item")).parseItem();
+                int amount = resultSet.getInt("amount");
+                storage.put(item.getType(), amount);
             }
+
+            // Closing the first resultSet and preparedStatement
+            resultSet.close();
+            preparedStatement.close();
 
             query = "SELECT * FROM storage_xp WHERE world = ? AND location = ?";
-            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-                preparedStatement.setString(1, world.getName());
-                preparedStatement.setString(2, Main.getPlugin().getSpawnerManager().getLocationString(location));
+            preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setString(1, world.getName());
+            preparedStatement.setString(2, Main.getPlugin().getSpawnerManager().getLocationString(location));
+            resultSet = preparedStatement.executeQuery();
 
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    if (resultSet.next()) {
-                        stored_xp = resultSet.getInt("xp");
-                    } else {
-                        stored_xp = 0; // Initialize to 0 if no data found
-                    }
-                }
+            if (resultSet.next()) {
+                stored_xp = resultSet.getInt("xp");
+            } else {
+                stored_xp = 0; // Initialize to 0 if no data found
             }
-
         } catch (SQLException exception) {
             exception.printStackTrace();
+        } finally {
+            try {
+                if (resultSet != null) resultSet.close();
+                if (preparedStatement != null) preparedStatement.close();
+                if (connection != null) connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 

@@ -34,11 +34,7 @@ public class SpawnerPlaceListener implements Listener {
             return;
         }
 
-        // Check if the spawner already exists in the plugin's spawner manager
-        boolean doesSpawnerExist = Main.getPlugin().getSpawnerManager().getSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation()) != null;
-        if (doesSpawnerExist) {
-            Main.getPlugin().getSpawnerManager().removeSpawner(Main.getPlugin().getSpawnerManager().getSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation()));
-        }
+        Main.getPlugin().getSpawnerManager().removeSpawner(e.getBlockPlaced());
 
         if (!canPlaceSpawner(e)) {
             e.setCancelled(true);
@@ -113,7 +109,11 @@ public class SpawnerPlaceListener implements Listener {
         boolean forceAutoKill = Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.force");
 
         if (block.getWorld().getBlockAt(block.getLocation()).getType().equals(block.getType())) {
-            ancSpawner spawner = new ancSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation(), 1, e.getPlayer().getUniqueId().toString(), spawnerType, spawnerMode, autoKill && forceAutoKill, 0);
+
+            boolean virtual_storage = Main.getPlugin().getConfig().getBoolean("config.modules.settings.virtual-storage.default");
+            boolean xp_storage = Main.getPlugin().getConfig().getBoolean("config.modules.settings.xp-storage.default");
+
+            ancSpawner spawner = new ancSpawner(e.getBlockPlaced().getWorld(), e.getBlockPlaced().getLocation(), 1, e.getPlayer().getUniqueId().toString(), spawnerType, spawnerMode, autoKill && forceAutoKill, 0, virtual_storage, xp_storage);
             Main.getPlugin().getSpawnerManager().addSpawner(spawner);
             Main.getPlugin().getSpawnerManager().updatedSpawnerList.add(spawner);
 

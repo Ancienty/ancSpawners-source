@@ -4,7 +4,6 @@ import com.ancienty.ancspawners.Commands.SpawnerCommand;
 import com.ancienty.ancspawners.Database.Database;
 import com.ancienty.ancspawners.Database.DatabaseTask;
 import com.ancienty.ancspawners.Database.SQLite;
-import com.ancienty.ancspawners.GUIs.FriendsGUI;
 import com.ancienty.ancspawners.Listeners.*;
 import com.ancienty.ancspawners.SpawnerKilling.DeathListener;
 import com.ancienty.ancspawners.SpawnerKilling.StatsListener;
@@ -85,11 +84,11 @@ public final class Main extends JavaPlugin implements Listener {
         Metrics metrics = new Metrics(this, pluginId);
 
         // Licensing (DISABLED FOR SPIGOTMC)
-        Utils utils = new Utils();
+        /*Utils utils = new Utils();
         if (!utils.checkLicense()) {
             license_invalid = true;
             return;
-        }
+        }*/
 
         getLogger().info("Creating/reading data files.");
         // Creation of database:
@@ -97,7 +96,11 @@ public final class Main extends JavaPlugin implements Listener {
             database = new SQLite();
         }
 
-        try {createLangFiles();} catch (IOException e) {throw new RuntimeException(e);}
+        try {
+            createLangFiles();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         getLogger().info("Registering events.");
         getServer().getPluginManager().registerEvents(new SpawnerManager(), this);
         getServer().getPluginManager().registerEvents(new StatsListener(), this);
@@ -108,13 +111,10 @@ public final class Main extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new SpawnerClickListener(), this);
         getServer().getPluginManager().registerEvents(new SpawnerGUIListener(), this);
         getServer().getPluginManager().registerEvents(new UpdateChecker(), this);
-        try {getServer().getPluginManager().registerEvents(new FriendsGUI(null, null), this);} catch (ExecutionException | InterruptedException e) {throw new RuntimeException(e);}
         getLogger().info("ancSpawners has been enabled.");
 
         // Spawner command registration.
         new SpawnerCommand();
-
-        storageEnabled = lang.getString("menu.storage.gui").equalsIgnoreCase("true");
 
         // Spawner loading to memory part.
         spawnerManager = new SpawnerManager();
@@ -122,7 +122,6 @@ public final class Main extends JavaPlugin implements Listener {
 
         // Update checker.
         new UpdateChecker().checkForUpdates();
-
 
         new Thread(() -> {
             while (true) {
@@ -137,236 +136,17 @@ public final class Main extends JavaPlugin implements Listener {
 
                     DatabaseTask task = operations_queue.poll();
                     assert task != null;
-                    String query = task.getQuery();
-                    Object[] parameters = task.getParameters();
-                    String select_parameters = null;
-                    if (query.startsWith("SELECT")) {
-                        select_parameters = task.getSelectParameter();
-                    }
 
-                    if (select_parameters == null) { // Meaning: The query is not a select operation.
-                        try (Connection connection = SQLite.dataSource.getConnection();
-                             PreparedStatement statement = connection.prepareStatement(query)) {
-
-                            for (int i = 0; i < parameters.length; i++) {
-                                statement.setObject(i + 1, parameters[i]);
-                            }
-
-                            int rowsAffected = statement.executeUpdate(); // Use executeUpdate
-
-                        } catch (SQLException ex) {
-                            ex.printStackTrace();
-                        }
-                    } else { // Meaning: The query is a select operation.
-                        CompletableFuture<Object> result = new CompletableFuture<>();
-                        if (select_parameters.startsWith("LIST")) { // Meaning: The return element needs to be a List<String>
-                            select_parameters = select_parameters.replace("LIST", "");
-                            List<String> return_this = new ArrayList<>();
-                            try (Connection connection = SQLite.dataSource.getConnection();
-                                 PreparedStatement statement = connection.prepareStatement(query)) {
-
-                                for (int i = 0; i < parameters.length; i++) {
-                                    statement.setObject(i + 1, parameters[i]);
-                                }
-
-                                try (ResultSet set = statement.executeQuery()) {
-                                    while (set.next()) {
-                                        return_this.add(set.getString(select_parameters));
-                                    }
-                                    if (return_this.isEmpty()) {
-                                        result.complete(Collections.emptyList());
-                                    } else {
-                                        result.complete(return_this);
-                                    }
-                                    task.setReturnElement(result);
-                                }
-
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        } else if (select_parameters.startsWith("TOTAL")) { // Meaning: You should use while set.next() and get all the values.
-                            select_parameters = select_parameters.replace("TOTAL", "");
-                            int return_this = 0;
-                            try (Connection connection = SQLite.dataSource.getConnection();
-                                 PreparedStatement statement = connection.prepareStatement("SELECT * FROM storage WHERE world = ? AND location = ?")) {
-
-                                for (int i = 0; i < parameters.length; i++) {
-                                    statement.setObject(i + 1, parameters[i]);
-                                }
-
-                                try (ResultSet set = statement.executeQuery()) {
-                                    while (set.next()) {
-                                        return_this += set.getInt("amount");
-                                    }
-                                    result.complete(return_this);
-                                    if (!result.isDone()) {
-                                        result.complete(0);
-                                    }
-                                    task.setReturnElement(result);
-                                }
-
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        } else if (select_parameters.startsWith("STORAGE_LIMIT")) {
-                            select_parameters = select_parameters.replace("STORAGE_LIMIT", "");
-                            try (Connection connection = SQLite.dataSource.getConnection();
-                                 PreparedStatement statement = connection.prepareStatement(query)) {
-
-                                for (int i = 0; i < parameters.length; i++) {
-                                    statement.setObject(i + 1, parameters[i]);
-                                }
-
-                                try (ResultSet set = statement.executeQuery()) {
-                                    if (set.next()) {
-                                        result.complete(Main.getPlugin().getConfig().getString("config.modules.storage-limit.enabled").equalsIgnoreCase("true") ? set.getInt("storage_limit") : 0);
-                                    } else {
-                                        result.complete(0);
-                                    }
-                                    if (!result.isDone()) {
-                                        result.complete(null);
-                                    }
-                                    task.setReturnElement(result);
-                                }
-
-
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        } else if (select_parameters.startsWith("SPAWNER_MONEY")) {
-                            select_parameters = select_parameters.replace("SPAWNER_MONEY", "");
-                            try (Connection connection = SQLite.dataSource.getConnection();
-                                 PreparedStatement statement = connection.prepareStatement(query)) {
-
-                                for (int i = 0; i < parameters.length; i++) {
-                                    statement.setObject(i + 1, parameters[i]);
-                                }
-
-                                try (ResultSet set = statement.executeQuery()) {
-                                    HashMap<String, Integer> items_list = new HashMap<>();
-                                    while (set.next()) {
-                                        items_list.put(set.getString("item"), set.getInt("amount"));
-                                    }
-
-                                    AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO); // Initialize with BigDecimal
-                                    String finalSelect_parameters1 = select_parameters;
-                                    items_list.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(item);;
-                                        BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
-                                        total.updateAndGet(v -> v.add(itemTotal)); // Update with BigDecimal
-                                    });
-
-                                    BigDecimal playerMultiplier = BigDecimal.valueOf(Main.getPlugin().getPlayerMultiplier(Bukkit.getPlayer(UUID.fromString(select_parameters.split("--")[1]))));
-                                    BigDecimal roundedTotal = total.get().multiply(playerMultiplier).setScale(2, RoundingMode.HALF_UP);
-
-                                    result.complete(roundedTotal.doubleValue()); // Return as double after rounding
-                                    task.setReturnElement(result);
-                                }
-
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        } else if (select_parameters.startsWith("SPAWNER_SELL_ITEMS")) {
-                            select_parameters = select_parameters.replace("SPAWNER_SELL_ITEMS", "");
-                            try (Connection connection = SQLite.dataSource.getConnection();
-                                 PreparedStatement statement = connection.prepareStatement(query)) {
-
-                                for (int i = 0; i < parameters.length; i++) {
-                                    statement.setObject(i + 1, parameters[i]);
-                                }
-
-                                try (ResultSet set = statement.executeQuery()) {
-                                    HashMap<String, Integer> itemsList = new HashMap<>();
-                                    while (set.next()) {
-                                        itemsList.put(set.getString("item"), set.getInt("amount"));
-                                    }
-
-                                    AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO);
-                                    AtomicInteger totalSold = new AtomicInteger();
-
-                                    String finalSelect_parameters = select_parameters;
-                                    itemsList.forEach((item, amount) -> {
-                                        double price = Main.getPlugin().getPriceForItem(item);
-                                        BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
-                                        total.updateAndGet(v -> v.add(itemTotal));
-                                        totalSold.addAndGet(amount);
-                                    });
-
-                                    BigDecimal playerMultiplier = BigDecimal.valueOf(Main.getPlugin().getPlayerMultiplier(Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1]))));
-                                    BigDecimal roundedTotal = total.get().multiply(playerMultiplier).setScale(2, RoundingMode.HALF_UP);
-
-                                    Main.getPlugin().sendMessage(Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1])), "soldItems", new String[]{String.valueOf(totalSold), String.valueOf(roundedTotal), String.valueOf(playerMultiplier)}); // Original functionality
-                                    Main.getEconomy().depositPlayer(Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1])), roundedTotal.doubleValue()); // Using roundedTotal for accuracy
-
-                                    double double_value = roundedTotal.doubleValue();
-                                    CompletableFuture<Double> return_this = new CompletableFuture<>();
-                                    return_this.complete(double_value);
-                                    if (!result.isDone()) {
-                                        result.complete(null);
-                                    }
-                                    if (getConfig().getBoolean("config.modules.title-messages.money-title")) {
-                                        Player player = Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1]));
-                                        if (player.isOnline()) {
-                                            String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.sellItemsTitle"));
-                                            String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.sellItemsSubtitle"));
-                                            title = title.replace("{money_gained}", String.valueOf(double_value));
-                                            sub_title = sub_title.replace("{money_gained}", String.valueOf(double_value));
-                                            player.sendTitle(title, sub_title, 5, 30, 5);
-                                        }
-                                    }
-                                    task.setReturnElement(result);
-                                }
-
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        } else {
-                            try (Connection connection = SQLite.dataSource.getConnection();
-                                 PreparedStatement statement = connection.prepareStatement(query)) {
-
-                                for (int i = 0; i < parameters.length; i++) {
-                                    statement.setObject(i + 1, parameters[i]);
-                                }
-
-                                try (ResultSet set = statement.executeQuery()) {
-                                    if (set.next()) {
-                                        if (task.is_boolean()) {
-                                            if (select_parameters.equalsIgnoreCase("autokill")) {
-                                                String boolean_in_database = set.getString("autokill");
-                                                if (boolean_in_database.equalsIgnoreCase("true") || boolean_in_database.equalsIgnoreCase(String.valueOf(1))) {
-                                                    result.complete(true);
-                                                } else {
-                                                    result.complete(false);
-                                                }
-                                            } else {
-                                                result.complete(true);
-                                            }
-                                        } else {
-                                            result.complete(set.getObject(select_parameters));
-                                        }
-                                    } else {
-                                        if (task.is_boolean()) {
-                                            result.complete(false);
-                                        } else {
-                                            result.complete(null);
-                                        }
-                                    }
-                                    if (!result.isDone()) {
-                                        result.complete(null);
-                                    }
-                                    task.setReturnElement(result);
-                                }
-
-                            } catch (SQLException ex) {
-                                ex.printStackTrace();
-                            }
-                        }
+                    try {
+                        executeDatabaseTask(task);
+                    } catch (Exception ex) {
+                        getLogger().info("Error while executing database task: " + ex.getMessage());
                     }
                 }
             }
         }).start();
-
     }
+
 
     @Override
     public void onDisable() {
@@ -376,6 +156,235 @@ public final class Main extends JavaPlugin implements Listener {
             spawnerManager.saveSpawnersNow();
         }
     }
+
+    private void executeDatabaseTask(DatabaseTask task) {
+        try {
+            String query = task.getQuery();
+            Object[] parameters = task.getParameters();
+            String select_parameters = null;
+            if (query.startsWith("SELECT")) {
+                select_parameters = task.getSelectParameter();
+            }
+
+            if (select_parameters == null) { // Not a select operation
+                try (Connection connection = SQLite.dataSource.getConnection();
+                     PreparedStatement statement = connection.prepareStatement(query)) {
+
+                    for (int i = 0; i < parameters.length; i++) {
+                        statement.setObject(i + 1, parameters[i]);
+                    }
+
+                    statement.executeUpdate();
+
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            } else { // Select operation
+                CompletableFuture<Object> result = new CompletableFuture<>();
+                if (select_parameters.startsWith("LIST")) {
+                    select_parameters = select_parameters.replace("LIST", "");
+                    List<String> returnList = new ArrayList<>();
+                    try (Connection connection = SQLite.dataSource.getConnection();
+                         PreparedStatement statement = connection.prepareStatement(query)) {
+
+                        for (int i = 0; i < parameters.length; i++) {
+                            statement.setObject(i + 1, parameters[i]);
+                        }
+
+                        try (ResultSet set = statement.executeQuery()) {
+                            while (set.next()) {
+                                returnList.add(set.getString(select_parameters));
+                            }
+                            result.complete(returnList.isEmpty() ? Collections.emptyList() : returnList);
+                            task.setReturnElement(result);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                } else if (select_parameters.startsWith("TOTAL")) {
+                    select_parameters = select_parameters.replace("TOTAL", "");
+                    int return_this = 0;
+                    try (Connection connection = SQLite.dataSource.getConnection();
+                         PreparedStatement statement = connection.prepareStatement(query)) {
+
+                        for (int i = 0; i < parameters.length; i++) {
+                            statement.setObject(i + 1, parameters[i]);
+                        }
+
+                        try (ResultSet set = statement.executeQuery()) {
+                            while (set.next()) {
+                                return_this += set.getInt("amount");
+                            }
+                            result.complete(return_this);
+                            if (!result.isDone()) {
+                                result.complete(0);
+                            }
+                            task.setReturnElement(result);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                } else if (select_parameters.startsWith("STORAGE_LIMIT")) {
+                    select_parameters = select_parameters.replace("STORAGE_LIMIT", "");
+                    try (Connection connection = SQLite.dataSource.getConnection();
+                         PreparedStatement statement = connection.prepareStatement(query)) {
+
+                        for (int i = 0; parameters != null && i < parameters.length; i++) {
+                            statement.setObject(i + 1, parameters[i]);
+                        }
+
+                        try (ResultSet set = statement.executeQuery()) {
+                            if (set.next()) {
+                                result.complete(Main.getPlugin().getConfig().getString("config.modules.storage-limit.enabled").equalsIgnoreCase("true") ? set.getInt("storage_limit") : 0);
+                            } else {
+                                result.complete(0);
+                            }
+                            if (!result.isDone()) {
+                                result.complete(null);
+                            }
+                            task.setReturnElement(result);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                } else if (select_parameters.startsWith("SPAWNER_MONEY")) {
+                    select_parameters = select_parameters.replace("SPAWNER_MONEY", "");
+                    try (Connection connection = SQLite.dataSource.getConnection();
+                         PreparedStatement statement = connection.prepareStatement(query)) {
+
+                        for (int i = 0; i < parameters.length; i++) {
+                            statement.setObject(i + 1, parameters[i]);
+                        }
+
+                        try (ResultSet set = statement.executeQuery()) {
+                            HashMap<String, Integer> items_list = new HashMap<>();
+                            while (set.next()) {
+                                items_list.put(set.getString("item"), set.getInt("amount"));
+                            }
+
+                            AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO); // Initialize with BigDecimal
+                            String finalSelect_parameters1 = select_parameters;
+                            items_list.forEach((item, amount) -> {
+                                double price = Main.getPlugin().getPriceForItem(item);
+                                ;
+                                BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
+                                total.updateAndGet(v -> v.add(itemTotal)); // Update with BigDecimal
+                            });
+
+                            BigDecimal playerMultiplier = BigDecimal.valueOf(Main.getPlugin().getPlayerMultiplier(Bukkit.getPlayer(UUID.fromString(select_parameters.split("--")[1]))));
+                            BigDecimal roundedTotal = total.get().multiply(playerMultiplier).setScale(2, RoundingMode.HALF_UP);
+
+                            result.complete(roundedTotal.doubleValue()); // Return as double after rounding
+                            task.setReturnElement(result);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                } else if (select_parameters.startsWith("SPAWNER_SELL_ITEMS")) {
+                    select_parameters = select_parameters.replace("SPAWNER_SELL_ITEMS", "");
+                    try (Connection connection = SQLite.dataSource.getConnection();
+                         PreparedStatement statement = connection.prepareStatement(query)) {
+
+                        for (int i = 0; i < parameters.length; i++) {
+                            statement.setObject(i + 1, parameters[i]);
+                        }
+
+                        try (ResultSet set = statement.executeQuery()) {
+                            HashMap<String, Integer> itemsList = new HashMap<>();
+                            while (set.next()) {
+                                itemsList.put(set.getString("item"), set.getInt("amount"));
+                            }
+
+                            AtomicReference<BigDecimal> total = new AtomicReference<>(BigDecimal.ZERO);
+                            AtomicInteger totalSold = new AtomicInteger();
+
+                            String finalSelect_parameters = select_parameters;
+                            itemsList.forEach((item, amount) -> {
+                                double price = Main.getPlugin().getPriceForItem(item);
+                                BigDecimal itemTotal = BigDecimal.valueOf(price * amount);
+                                total.updateAndGet(v -> v.add(itemTotal));
+                                totalSold.addAndGet(amount);
+                            });
+
+                            BigDecimal playerMultiplier = BigDecimal.valueOf(Main.getPlugin().getPlayerMultiplier(Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1]))));
+                            BigDecimal roundedTotal = total.get().multiply(playerMultiplier).setScale(2, RoundingMode.HALF_UP);
+
+                            Main.getPlugin().sendMessage(Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1])), "soldItems", new String[]{String.valueOf(totalSold), String.valueOf(roundedTotal), String.valueOf(playerMultiplier)}); // Original functionality
+                            Main.getEconomy().depositPlayer(Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1])), roundedTotal.doubleValue()); // Using roundedTotal for accuracy
+
+                            double double_value = roundedTotal.doubleValue();
+                            CompletableFuture<Double> return_this = new CompletableFuture<>();
+                            return_this.complete(double_value);
+                            if (!result.isDone()) {
+                                result.complete(null);
+                            }
+                            if (getConfig().getBoolean("config.modules.title-messages.money-title")) {
+                                Player player = Bukkit.getPlayer(UUID.fromString(select_parameters.split("---")[1]));
+                                if (player.isOnline()) {
+                                    String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.sellItemsTitle"));
+                                    String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.sellItemsSubtitle"));
+                                    title = title.replace("{money_gained}", String.valueOf(double_value));
+                                    sub_title = sub_title.replace("{money_gained}", String.valueOf(double_value));
+                                    player.sendTitle(title, sub_title, 5, 30, 5);
+                                }
+                            }
+                            task.setReturnElement(result);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                } else {
+                    try (Connection connection = SQLite.dataSource.getConnection();
+                         PreparedStatement statement = connection.prepareStatement(query)) {
+
+                        for (int i = 0; i < parameters.length; i++) {
+                            statement.setObject(i + 1, parameters[i]);
+                        }
+
+                        try (ResultSet set = statement.executeQuery()) {
+                            if (set.next()) {
+                                if (task.is_boolean()) {
+                                    if (select_parameters.equalsIgnoreCase("autokill")) {
+                                        String boolean_in_database = set.getString("autokill");
+                                        if (boolean_in_database.equalsIgnoreCase("true") || boolean_in_database.equalsIgnoreCase(String.valueOf(1))) {
+                                            result.complete(true);
+                                        } else {
+                                            result.complete(false);
+                                        }
+                                    } else {
+                                        result.complete(true);
+                                    }
+                                } else {
+                                    result.complete(set.getObject(select_parameters));
+                                }
+                            } else {
+                                if (task.is_boolean()) {
+                                    result.complete(false);
+                                } else {
+                                    result.complete(null);
+                                }
+                            }
+                            if (!result.isDone()) {
+                                result.complete(null);
+                            }
+                            task.setReturnElement(result);
+                        }
+
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
 
     public SpawnerManager getSpawnerManager() {
         return spawnerManager;
@@ -582,48 +591,23 @@ public final class Main extends JavaPlugin implements Listener {
     }
 
     public void spawnerGiveXP(Player player, Block block) throws ExecutionException, InterruptedException {
-        if (getConfig().getString("config.modules.permission-based-xp.enabled").equalsIgnoreCase("true")) {
-
-            ancSpawner ancSpawner = spawnerManager.getSpawner(block.getWorld(), block.getLocation());
-            String owneruuid = ancSpawner.getOwnerUUID();
-            int xp = ancSpawner.getStorage().getStoredXp();
-            if (owneruuid.equalsIgnoreCase(player.getUniqueId().toString())) {
-                if (xp != 0) {
-                    player.giveExp(xp);
-                    ancSpawner.getStorage().setStoredXp(0);
-                    sendMessage(player, "tookXP", new String[]{String.valueOf(xp)});
-                    if (getConfig().getBoolean("config.modules.title-messages.xp-title")) {
-                        if (player.isOnline()) {
-                            String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpTitle"));
-                            String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpSubtitle"));
-                            title = title.replace("{xp_gained}", String.valueOf(xp));
-                            sub_title = sub_title.replace("{xp_gained}", String.valueOf(xp));
-                            player.sendTitle(title, sub_title, 5, 30, 5);
-                        }
-                    }
-                } else {
-                    sendMessage(player, "noXP", new String[]{});
+        ancSpawner ancSpawner = spawnerManager.getSpawner(block.getWorld(), block.getLocation());
+        int xp = ancSpawner.getStorage().getStoredXp();
+        if (xp != 0) {
+            player.giveExp(xp);
+            ancSpawner.getStorage().setStoredXp(0);
+            sendMessage(player, "tookXP", new String[]{String.valueOf(xp)});
+            if (getConfig().getBoolean("config.modules.title-messages.xp-title")) {
+                if (player.isOnline()) {
+                    String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpTitle"));
+                    String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpSubtitle"));
+                    title = title.replace("{xp_gained}", String.valueOf(xp));
+                    sub_title = sub_title.replace("{xp_gained}", String.valueOf(xp));
+                    player.sendTitle(title, sub_title, 5, 30, 5);
                 }
-           }
-        } else {
-            ancSpawner ancSpawner = spawnerManager.getSpawner(block.getWorld(), block.getLocation());
-            int xp = ancSpawner.getStorage().getStoredXp();
-            if (xp != 0) {
-                player.giveExp(xp);
-                ancSpawner.getStorage().setStoredXp(0);
-                sendMessage(player, "tookXP", new String[]{String.valueOf(xp)});
-                if (getConfig().getBoolean("config.modules.title-messages.xp-title")) {
-                    if (player.isOnline()) {
-                        String title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpTitle"));
-                        String sub_title = ChatColor.translateAlternateColorCodes('&', Main.getPlugin().lang.getString("lang.takeXpSubtitle"));
-                        title = title.replace("{xp_gained}", String.valueOf(xp));
-                        sub_title = sub_title.replace("{xp_gained}", String.valueOf(xp));
-                        player.sendTitle(title, sub_title, 5, 30, 5);
-                    }
-                }
-            } else {
-                sendMessage(player, "noXP", new String[]{});
             }
+        } else {
+            sendMessage(player, "noXP", new String[]{});
         }
     }
 

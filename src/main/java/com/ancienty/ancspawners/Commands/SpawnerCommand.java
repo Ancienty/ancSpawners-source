@@ -59,7 +59,6 @@ public class SpawnerCommand extends Command {
                 if (Main.getPermissions().has(player, "ancspawners.admin")) {
                     Main.getPlugin().reloadConfig();
                     try {Main.getPlugin().createLangFiles();} catch (IOException e) {throw new RuntimeException(e);}
-                    Main.getPlugin().storageEnabled = Main.getPlugin().lang.getString("menu.storage.gui").equalsIgnoreCase("true");
                     Main.getPlugin().sendMessage(player, "reloadedConfig", new String[]{});
                 } else {
                     Main.getPlugin().sendMessage(player, "noPermission", new String[]{});

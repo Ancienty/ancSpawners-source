@@ -37,7 +37,8 @@ public class SpawnerSpawnListener implements Listener {
                 ancStorage storage = spawner.getStorage();
                 String material_name = Main.getPlugin().getConfig().getString("spawners." + spawner.getType() + ".spawnerInfo.material");
                 if (material_name != null) {
-                    if (Main.getPlugin().storageEnabled) {
+
+                    if (spawner.isVirtualStorageEnabled()) {
                         Material material = XMaterial.valueOf(material_name).parseMaterial();
                         if (material != null) {
                             storage.setStoredItem(material, storage.getStoredItem(material) + spawner.getLevel());
@@ -49,8 +50,8 @@ public class SpawnerSpawnListener implements Listener {
                     }
                 }
             }
+            e.getEntity().remove();
         }
-        e.getEntity().remove();
     }
 
     public void dropCustomItems(String material_name, Location location, Integer amount, @Nullable String item_name, @Nullable List<String> item_lore) {
@@ -89,10 +90,6 @@ public class SpawnerSpawnListener implements Listener {
         }
     }
 
-    public boolean isXPStorageEnabled() {
-        return Main.getPlugin().lang.getBoolean("menu.exp.gui");
-    }
-
     public boolean loottableOnlyAutokill() {
         return Main.getPlugin().getConfig().getBoolean("config.modules.auto-kill.loottable-only-autokill");
     }
@@ -126,29 +123,28 @@ public class SpawnerSpawnListener implements Listener {
                 xp_drop = 0;
             }
 
-            if (Main.getPlugin().storageEnabled) {
-                ancStorage storage = spawner.getStorage();
+            ancStorage storage = spawner.getStorage();
+            if (item_drops != null) {
                 for (ItemStack item_drop : item_drops) {
-                    int new_storage_amount = storage.getStoredItem(item_drop.getType()) + item_drop.getAmount() * level;
-                    new_storage_amount = Math.min(new_storage_amount, spawner.getStorageLimit());
-                    storage.setStoredItem(item_drop.getType(), new_storage_amount);
+                    if (spawner.isVirtualStorageEnabled()) {
+                        int new_storage_amount = storage.getStoredItem(item_drop.getType()) + item_drop.getAmount() * level;
+                        new_storage_amount = Math.min(new_storage_amount, spawner.getStorageLimit());
+                        storage.setStoredItem(item_drop.getType(), new_storage_amount);
+                    } else {
+                        deathListener.dropItems(item_drop.getType().toString(), item_drop.getAmount() * level, e.getEntity().getLocation());
+                    }
                 }
+            }
+
+            if (spawner.isXPStorageEnabled()) {
                 if (xp_drop > 0) {
-                    if (isXPStorageEnabled()) {
                         int new_xp_amount = storage.getStoredXp() + xp_drop * level;
                         new_xp_amount = Math.min(new_xp_amount, Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit"));
                         storage.setStoredXp(new_xp_amount);
-                    } else {
                         deathListener.dropXP(e.getEntity().getLocation(), xp_drop);
-                    }
                 }
             } else {
-                for (ItemStack item_drop : item_drops) {
-                    deathListener.dropItems(item_drop.getType().toString(), item_drop.getAmount() * level, e.getEntity().getLocation());
-                }
-                if (xp_drop > 0) {
-                    deathListener.dropXP(e.getEntity().getLocation(), xp_drop);
-                }
+                deathListener.dropXP(e.getEntity().getLocation(), xp_drop);
             }
 
             e.getDrops().clear();

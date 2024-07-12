@@ -19,8 +19,8 @@ config:
       # IMPORTANT: Keep these in ascending order, or it might not work well for
       # players who have more than one of these permissions.
       permissions:
-        ancspawners-drop1: 50
-        ancspawners-drop2: 75
+        ancspawners-drop1: 100
+        ancspawners-drop2: 100
     auto-kill:
       # Auto-kill is a togglable feature, you can enable/disable it through
       # the main menu of the spawners. Auto-kill is basically when a spawner
@@ -82,13 +82,6 @@ config:
       # This determines the maximum level a spawner could be
       # levelled up to. Default is 256
       level-limit: 256
-    permission-based-xp:
-      # This module basically blocks players without the permission given below
-      # to store XP on the spawner (the xp does not get dropped, but gets deleted.)
-      # NOTE: This is quite experimental, please use at your own risk.
-      # NOTE: Enabling this disables FRIENDS getting XP from spawners.
-      enabled: false
-      permission: ancspawners.getxp
     vanilla-spawner-support:
       # This module basically adds support for vanilla spawners.
       # For examaple, if a player tries to break a vanilla spawner
@@ -118,6 +111,21 @@ config:
       # when they sell items or take xp from a spawner.
       money-title: true
       xp-title: true
+    settings:
+      virtual-storage:
+        # Should virtual storage be enabled for newly placed spawners?
+        # Set to 'false' if you don't want this.
+        # If you set 'gui: false' in the lang files, please set default to false, and force-default to true.
+        default: true
+        # Do you want to force default value?
+        # Players will not be able to change this no matter what.
+        force-default: false
+        # Players will need this permission to toggle virtual storage for their spawners.
+        permission: ancspawners.settings.togglestorage
+      xp-storage:
+        default: true
+        force-default: false
+        permission: ancspawners.settings.togglexp
 
 
 # DO NOT CHANGE ANYTHING IN DATABASE, THIS IS VERY EXPERIMENTAL RIGHT NOW.

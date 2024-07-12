@@ -1,7 +1,8 @@
 package com.ancienty.ancspawners.SpawnerManager;
 
-import com.ancienty.ancspawners.Database.SQLite;
 import com.ancienty.ancspawners.Main;
+import com.cryptomorin.xseries.XMaterial;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 
@@ -11,6 +12,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ancSpawner {
 
@@ -24,8 +27,10 @@ public class ancSpawner {
     private final ancStorage storage;
     private int storage_limit;
     private final List<String> friend_uuids;
+    private boolean virtual_storage;
+    private boolean xp_storage;
 
-    public ancSpawner(World world, Location location, int level, String ownerUUID, String type, String mode, boolean autokill, int storage_limit) {
+    public ancSpawner(World world, Location location, int level, String ownerUUID, String type, String mode, boolean autokill, int storage_limit, boolean virtual_storage, boolean xp_storage) {
         this.world = world;
         this.location = location;
         this.level = level;
@@ -39,6 +44,8 @@ public class ancSpawner {
         }
         this.storage_limit = storage_limit;
         this.friend_uuids = new ArrayList<>();
+        this.virtual_storage = virtual_storage;
+        this.xp_storage = xp_storage;
     }
 
     public void loadFriendsUUID(Connection connection, String locationData) {
@@ -56,6 +63,18 @@ public class ancSpawner {
             sqlEx.printStackTrace();
         }
     }
+
+    public CompletableFuture<Boolean> isBlockSpawner() {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+            boolean isSpawner = getWorld().getBlockAt(getLocation()).getType().equals(XMaterial.SPAWNER.parseMaterial());
+            future.complete(isSpawner);
+        });
+
+        return future;
+    }
+
 
     public World getWorld() {
         return world;
@@ -91,6 +110,28 @@ public class ancSpawner {
 
     public int getStorageLimit() {
         return storage_limit;
+    }
+
+    public boolean isVirtualStorageEnabled() {
+        return virtual_storage;
+    }
+
+    public boolean isXPStorageEnabled() {
+        return xp_storage;
+    }
+
+    public void setVirtualStorage(boolean bool) {
+        virtual_storage = bool;
+        if (!Main.getPlugin().getSpawnerManager().updatedSpawnerList.contains(this)) {
+            Main.getPlugin().getSpawnerManager().updatedSpawnerList.add(this);
+        }
+    }
+
+    public void setXPStorage(boolean bool) {
+        xp_storage = bool;
+        if (!Main.getPlugin().getSpawnerManager().updatedSpawnerList.contains(this)) {
+            Main.getPlugin().getSpawnerManager().updatedSpawnerList.add(this);
+        }
     }
 
     public List<String> getFriendUuids() {

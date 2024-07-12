@@ -1,7 +1,6 @@
 package com.ancienty.ancspawners.Database;
 
 import com.ancienty.ancspawners.Main;
-import com.ancienty.ancspawners.SpawnerManager.ancSpawner;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -14,7 +13,6 @@ import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.ancienty.ancspawners.Main.getPermissions;
 
@@ -35,7 +33,7 @@ public class SQLite implements Database {
             config.setMaxLifetime(1800000);   // 30 minutes - Standard
 
             // Leak Detection
-            config.setLeakDetectionThreshold(3000); // 3 seconds - Detect connections not closed within this time
+            config.setLeakDetectionThreshold(5000); // 5 seconds - Detect connections not closed within this time
 
             // Initialization Fail Timeout
             config.setInitializationFailTimeout(30000); // 30 seconds - Fail fast if database is unreachable
@@ -56,6 +54,10 @@ public class SQLite implements Database {
             connection.prepareStatement("CREATE TABLE IF NOT EXISTS friends (world varchar(255), location varchar(255), uuid varchar(255))").execute();
             connection.prepareStatement("CREATE TABLE IF NOT EXISTS storage (world varchar(255), location varchar(255), item varchar(255), amount INT, CONSTRAINT storage_unique_combo UNIQUE (world, location, item))").execute();
             connection.prepareStatement("CREATE TABLE IF NOT EXISTS storage_xp (world varchar(255), location varchar(255), xp INT, CONSTRAINT storage_xp_unique_combo UNIQUE (world, location))").execute();
+
+            addColumnIfNotExists(connection, "spawners", "xp_storage", "varchar(255)");
+            addColumnIfNotExists(connection, "spawners", "virtual_storage", "varchar(255)");
+
             if (!indexExists(connection, "spawners", "idx_spawners_world_location")) {
                 connection.prepareStatement("CREATE INDEX idx_spawners_world_location ON spawners(world, location)").execute();
             }
@@ -73,6 +75,15 @@ public class SQLite implements Database {
         }
     }
 
+    private void addColumnIfNotExists(Connection connection, String tableName, String columnName, String columnType) throws SQLException {
+        DatabaseMetaData meta = connection.getMetaData();
+        ResultSet res = meta.getColumns(null, null, tableName, columnName);
+        if (!res.next()) {
+            String sql = "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnType;
+            connection.prepareStatement(sql).execute();
+        }
+    }
+
     // Helper method to check if an index exists
     private boolean indexExists(Connection connection, String tableName, String indexName) throws SQLException {
         String query = "SELECT count(*) FROM sqlite_master WHERE type = 'index' AND name = ?";
@@ -87,7 +98,7 @@ public class SQLite implements Database {
         return false;
     }
 
-    public void notifyTask() {
+    public static void notifyTask() {
         synchronized (operations_queue) {
             operations_queue.notify();
         }

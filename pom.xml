@@ -5,7 +5,7 @@
 
     <groupId>com.ancienty</groupId>
     <artifactId>ancSpawners</artifactId>
-    <version>2.2.2-licensed</version>
+    <version>2.2.4</version>
     <packaging>jar</packaging>
 
     <name>ancSpawners</name>

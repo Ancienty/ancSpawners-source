@@ -1,5 +1,7 @@
 package com.ancienty.ancspawners.SpawnerManager;
 
+import com.ancienty.ancspawners.Database.DatabaseTask;
+import com.ancienty.ancspawners.Database.SQLite;
 import com.ancienty.ancspawners.Listeners.SpawnerSpawnListener;
 import com.ancienty.ancspawners.Main;
 import com.ancienty.ancspawners.Versions.Holograms.SpawnerHologram_General;
@@ -17,6 +19,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -28,6 +31,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
+import static com.ancienty.ancspawners.Database.Database.operations_queue;
 import static com.ancienty.ancspawners.Database.SQLite.dataSource;
 
 public class SpawnerManager implements Listener {
@@ -80,8 +84,10 @@ public class SpawnerManager implements Listener {
                                 String mode = resultSet.getString("mode");
                                 boolean autokill = resultSet.getBoolean("autokill");
                                 int storageLimit = resultSet.getInt("storage_limit");
+                                boolean virtual_storage = resultSet.getObject("virtual_storage") != null ? resultSet.getBoolean("virtual_storage") : Main.getPlugin().getConfig().getBoolean("config.modules.settings.virtual-storage.default");
+                                boolean xp_storage = resultSet.getObject("xp_storage") != null ? resultSet.getBoolean("xp_storage") : Main.getPlugin().getConfig().getBoolean("config.modules.settings.xp-storage.default");
 
-                                ancSpawner spawner = new ancSpawner(world, location, level, ownerUUID, type, mode, autokill, storageLimit);
+                                ancSpawner spawner = new ancSpawner(world, location, level, ownerUUID, type, mode, autokill, storageLimit, virtual_storage, xp_storage);
                                 spawner.loadFriendsUUID(connection, locationData);
                                 spawnerList.add(spawner);
                             } while (resultSet.next());
@@ -111,7 +117,6 @@ public class SpawnerManager implements Listener {
         return "x:" + location.getBlockX() + " y:" + location.getBlockY() + " z:" + location.getBlockZ();
     }
 
-
     public void saveSpawnersNow() {
         Logger logger = Main.getPlugin().getLogger();
         save(logger);
@@ -128,9 +133,10 @@ public class SpawnerManager implements Listener {
         logger.info("Starting auto-save of " + updatedSpawnerList.size() + " new spawner information.");
         List<ancSpawner> spawners_done = new ArrayList<>();
         for (ancSpawner spawner : updatedSpawnerList) {
-            if (spawners_done.contains(spawner)) return;
+            if (spawners_done.contains(spawner)) continue;
             spawners_done.add(spawner);
-            String spawnerQuery = "INSERT OR REPLACE INTO spawners (world, location, uuid, mode, type, level, autokill, storage_limit) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+            String spawnerQuery = "INSERT OR REPLACE INTO spawners (world, location, uuid, mode, type, level, autokill, storage_limit, virtual_storage, xp_storage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             String deleteFriendsQuery = "DELETE FROM friends WHERE world = ? AND location = ?";
             String friendQuery = "INSERT INTO friends (world, location, uuid) VALUES (?, ?, ?)";
             String deleteStorageQuery = "DELETE FROM storage WHERE world = ? AND location = ?";
@@ -138,70 +144,70 @@ public class SpawnerManager implements Listener {
             String deleteStorageXpQuery = "DELETE FROM storage_xp WHERE world = ? AND location = ?";
             String storageXpQuery = "INSERT INTO storage_xp (world, location, xp) VALUES (?, ?, ?)";
 
-            try (Connection connection = dataSource.getConnection()) {
-                // Save spawner details
-                try (PreparedStatement statement = connection.prepareStatement(spawnerQuery)) {
-                    statement.setString(1, spawner.getWorld().getName());
-                    statement.setString(2, getLocation(spawner));
-                    statement.setString(3, spawner.getOwnerUUID());
-                    statement.setString(4, spawner.getMode());
-                    statement.setString(5, spawner.getType());
-                    statement.setInt(6, spawner.getLevel());
-                    statement.setBoolean(7, spawner.getAutoKill());
-                    statement.setInt(8, spawner.getStorageLimit());
-                    statement.executeUpdate();
-                }
+            // Save spawner details
+            DatabaseTask spawnerTask = new DatabaseTask(spawnerQuery, new Object[]{
+                    spawner.getWorld().getName(),
+                    getLocation(spawner),
+                    spawner.getOwnerUUID(),
+                    spawner.getMode(),
+                    spawner.getType(),
+                    spawner.getLevel(),
+                    spawner.getAutoKill(),
+                    spawner.getStorageLimit(),
+                    spawner.isVirtualStorageEnabled(),
+                    spawner.isXPStorageEnabled()
+            }, null);
+            operations_queue.add(spawnerTask);
 
-                // Delete and save friends
-                try (PreparedStatement deleteStatement = connection.prepareStatement(deleteFriendsQuery)) {
-                    deleteStatement.setString(1, spawner.getWorld().getName());
-                    deleteStatement.setString(2, getLocation(spawner));
-                    deleteStatement.executeUpdate();
-                }
-                try (PreparedStatement statement = connection.prepareStatement(friendQuery)) {
-                    for (String uuid : spawner.getFriendUuids()) {
-                        statement.setString(1, spawner.getWorld().getName());
-                        statement.setString(2, getLocation(spawner));
-                        statement.setString(3, uuid);
-                        statement.addBatch();
-                    }
-                    statement.executeBatch();
-                }
+            // Delete and save friends
+            DatabaseTask deleteFriendsTask = new DatabaseTask(deleteFriendsQuery, new Object[]{
+                    spawner.getWorld().getName(),
+                    getLocation(spawner)
+            }, null);
+            operations_queue.add(deleteFriendsTask);
 
-                // Delete and save storage
-                try (PreparedStatement deleteStatement = connection.prepareStatement(deleteStorageQuery)) {
-                    deleteStatement.setString(1, spawner.getWorld().getName());
-                    deleteStatement.setString(2, getLocation(spawner));
-                    deleteStatement.executeUpdate();
-                }
-                try (PreparedStatement statement = connection.prepareStatement(storageQuery)) {
-                    for (Map.Entry<Material, Integer> entry : spawner.getStorage().getStorage().entrySet()) {
-                        statement.setString(1, spawner.getWorld().getName());
-                        statement.setString(2, getLocation(spawner));
-                        statement.setString(3, entry.getKey().toString());
-                        statement.setInt(4, entry.getValue());
-                        statement.addBatch();
-                    }
-                    statement.executeBatch();
-                }
-
-                // Delete and save storage XP
-                try (PreparedStatement deleteStatement = connection.prepareStatement(deleteStorageXpQuery)) {
-                    deleteStatement.setString(1, spawner.getWorld().getName());
-                    deleteStatement.setString(2, getLocation(spawner));
-                    deleteStatement.executeUpdate();
-                }
-                try (PreparedStatement statement = connection.prepareStatement(storageXpQuery)) {
-                    statement.setString(1, spawner.getWorld().getName());
-                    statement.setString(2, getLocation(spawner));
-                    statement.setInt(3, spawner.getStorage().getStoredXp());
-                    statement.executeUpdate();
-                }
-
-            } catch (SQLException ex) {
-                ex.printStackTrace();
+            for (String uuid : spawner.getFriendUuids()) {
+                DatabaseTask friendTask = new DatabaseTask(friendQuery, new Object[]{
+                        spawner.getWorld().getName(),
+                        getLocation(spawner),
+                        uuid
+                }, null);
+                operations_queue.add(friendTask);
             }
 
+            // Delete and save storage
+            DatabaseTask deleteStorageTask = new DatabaseTask(deleteStorageQuery, new Object[]{
+                    spawner.getWorld().getName(),
+                    getLocation(spawner)
+            }, null);
+            operations_queue.add(deleteStorageTask);
+
+            for (Map.Entry<Material, Integer> entry : spawner.getStorage().getStorage().entrySet()) {
+                DatabaseTask storageTask = new DatabaseTask(storageQuery, new Object[]{
+                        spawner.getWorld().getName(),
+                        getLocation(spawner),
+                        entry.getKey().toString(),
+                        entry.getValue()
+                }, null);
+                operations_queue.add(storageTask);
+            }
+
+            // Delete and save storage XP
+            DatabaseTask deleteStorageXpTask = new DatabaseTask(deleteStorageXpQuery, new Object[]{
+                    spawner.getWorld().getName(),
+                    getLocation(spawner)
+            }, null);
+            operations_queue.add(deleteStorageXpTask);
+
+            DatabaseTask storageXpTask = new DatabaseTask(storageXpQuery, new Object[]{
+                    spawner.getWorld().getName(),
+                    getLocation(spawner),
+                    spawner.getStorage().getStoredXp()
+            }, null);
+            operations_queue.add(storageXpTask);
+
+            // Notify task execution
+            SQLite.notifyTask();
         }
         logger.info("Spawner auto save has been successful.");
     }
@@ -259,7 +265,6 @@ public class SpawnerManager implements Listener {
         }
         return false;
     }
-
 
     public Location getNewLocation(Location originalLocation, int recursionDepth) {
         if (recursionDepth > MAX_RECURSION_DEPTH) {
@@ -324,42 +329,52 @@ public class SpawnerManager implements Listener {
             for (List<ancSpawner> batch : batches) {
                 Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), () -> {
                     for (ancSpawner spawner : batch) {
-                        if (random.nextInt(101) <= 10) {
-                            if (DHAPI.getHologram(getHologramName(spawner)) != null) {
-                                SpawnerHologram_General.updateSpawnerHologram(spawner, getHologramName(spawner));
+                        spawner.isBlockSpawner().thenAccept(isSpawner -> {
+                            if (!isSpawner) {
+                                removeSpawner(spawner);
+                                return;
                             }
-                        }
-                        if (spawner.getLocation().getChunk().isLoaded() && checkSpawnConditions(spawner) && spawner.getMode().equalsIgnoreCase("entity")) {
-                            long lastSpawn = lastSpawnTime.getOrDefault(spawner, 0L);
-                            int spawnInterval = getSpawnInterval(spawner.getType());
-                            if (currentTime - lastSpawn >= spawnInterval * 1000L) {
-                                Location spawnLocation = getNewLocation(spawner.getLocation(), 10);
-                                EntityType entityType = getEntityType(spawner.getType());
-                                if (entityType != null) {
-                                    Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
-                                        LivingEntity spawnedEntity = (LivingEntity) spawner.getWorld().spawnEntity(spawnLocation, entityType);
-                                        if (spawner.getAutoKill()) {
-                                            entityLink.put(spawnedEntity.getUniqueId(), spawner);
-                                            if (tamedWolf != null && tamedWolf.isValid()) {
-                                                spawnedEntity.damage(spawnedEntity.getHealth() + 20, tamedWolf);
-                                            } else {
-                                                tameWolfForKills();
-                                                spawnedEntity.damage(spawnedEntity.getHealth() + 20, tamedWolf);
-                                            }
-                                        } else {
-                                            SpawnerSpawnListener.entityLinkToSpawners.put(spawnedEntity.getUniqueId(), spawner);
-                                        }
-                                    });
-                                    lastSpawnTime.put(spawner, currentTime);
+
+                            if (random.nextInt(101) <= 10) {
+                                if (DHAPI.getHologram(getHologramName(spawner)) != null) {
+                                    SpawnerHologram_General.updateSpawnerHologram(spawner, getHologramName(spawner));
                                 }
                             }
-                        }
+                            if (spawner.getLocation().getChunk().isLoaded() && checkSpawnConditions(spawner) && spawner.getMode().equalsIgnoreCase("entity")) {
+                                long lastSpawn = lastSpawnTime.getOrDefault(spawner, 0L);
+                                int spawnInterval = getSpawnInterval(spawner.getType());
+                                if (currentTime - lastSpawn >= spawnInterval * 1000L) {
+                                    Location spawnLocation = getNewLocation(spawner.getLocation(), 10);
+                                    EntityType entityType = getEntityType(spawner.getType());
+                                    if (entityType != null) {
+                                        Bukkit.getScheduler().runTask(Main.getPlugin(), () -> {
+                                            LivingEntity spawnedEntity = (LivingEntity) spawner.getWorld().spawnEntity(spawnLocation, entityType);
+                                            if (spawner.getAutoKill()) {
+                                                entityLink.put(spawnedEntity.getUniqueId(), spawner);
+                                                if (tamedWolf != null && tamedWolf.isValid()) {
+                                                    spawnedEntity.damage(spawnedEntity.getHealth() + 20, tamedWolf);
+                                                } else {
+                                                    tameWolfForKills();
+                                                    spawnedEntity.damage(spawnedEntity.getHealth() + 20, tamedWolf);
+                                                }
+                                            } else {
+                                                SpawnerSpawnListener.entityLinkToSpawners.put(spawnedEntity.getUniqueId(), spawner);
+                                            }
+                                        });
+                                        lastSpawnTime.put(spawner, currentTime);
+                                    }
+                                }
+                            }
+                        }).exceptionally(ex -> {
+                            Main.getPlugin().getLogger().severe("Error checking if block is spawner: " + ex.getMessage());
+                            ex.printStackTrace();
+                            return null;
+                        });
                     }
                 });
             }
         }, 20, 20);
     }
-
 
     public Map<UUID, ancSpawner> getEntityLink() {
         return entityLink;
@@ -387,13 +402,55 @@ public class SpawnerManager implements Listener {
                 .orElse(null);
     }
 
+    public void removeSpawner(Block block) {
+        try {
+            World world = block.getWorld();
+            Location location = block.getLocation();
+            String deleteSpawnerQuery = "DELETE FROM spawners WHERE world = ? AND location = ?";
+
+            DatabaseTask deleteSpawnerTask = new DatabaseTask(deleteSpawnerQuery, new Object[]{
+                    world.getName(),
+                    getLocationString(location)
+            }, null);
+
+            operations_queue.add(deleteSpawnerTask);
+            SQLite.notifyTask();
+
+            ancSpawner ancSpawner = getSpawner(world, location);
+            if (ancSpawner == null) {
+                return;
+            }
+            spawnerList.removeIf(spawner -> spawner.equals(ancSpawner));
+            updatedSpawnerList.removeIf(spawner -> spawner.equals(ancSpawner));
+        } catch (Exception ex) {
+            Main.getPlugin().getLogger().info("Error while removing spawner 2: " + ex.getMessage());
+        }
+    }
+
     public void removeSpawner(ancSpawner ancSpawner) {
-        Main.database.deleteSpawner(ancSpawner.getWorld(), ancSpawner.getLocation());
-        spawnerList.removeIf(spawner -> spawner.equals(ancSpawner));
-        updatedSpawnerList.removeIf(spawner -> spawner.equals(ancSpawner));
+        try {
+            World world = ancSpawner.getWorld();
+            Location location = ancSpawner.getLocation();
+            String deleteSpawnerQuery = "DELETE FROM spawners WHERE world = ? AND location = ?";
+
+            DatabaseTask deleteSpawnerTask = new DatabaseTask(deleteSpawnerQuery, new Object[]{
+                    world.getName(),
+                    getLocationString(location)
+            }, null);
+
+            operations_queue.add(deleteSpawnerTask);
+            SQLite.notifyTask();
+
+            spawnerList.removeIf(spawner -> spawner.equals(ancSpawner));
+            updatedSpawnerList.removeIf(spawner -> spawner.equals(ancSpawner));
+        } catch (Exception ex) {
+            Main.getPlugin().getLogger().info("Error while removing spawner: " + ex.getMessage());
+        }
     }
 
     public void addSpawner(ancSpawner ancSpawner) {
-        spawnerList.add(ancSpawner);
+        if (!spawnerList.contains(ancSpawner)) {
+            spawnerList.add(ancSpawner);
+        }
     }
 }

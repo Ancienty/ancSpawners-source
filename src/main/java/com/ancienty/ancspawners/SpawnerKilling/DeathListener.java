@@ -39,8 +39,8 @@ public class DeathListener implements Listener {
                 xp_drop = e.getDroppedExp();
             }
 
-            if (Main.getPlugin().storageEnabled) {
-                ancStorage storage = spawner.getStorage();
+            ancStorage storage = spawner.getStorage();
+            if (spawner.isVirtualStorageEnabled()) {
                 if (item_drops != null) {
                     for (ItemStack item_drop : item_drops) {
                         int new_storage_amount = storage.getStoredItem(item_drop.getType()) + item_drop.getAmount() * level;
@@ -50,24 +50,24 @@ public class DeathListener implements Listener {
                         storage.setStoredItem(item_drop.getType(), new_storage_amount);
                     }
                 }
-                if (xp_drop > 0) {
-                    if (spawnerSpawnListener.isXPStorageEnabled()) {
-                        int new_xp_amount = storage.getStoredXp() + xp_drop * level;
-                        if (new_xp_amount >= Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
-                            new_xp_amount = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
-                        }
-                        storage.setStoredXp(new_xp_amount);
-                    } else {
-                        dropXP(e.getEntity().getLocation(), xp_drop);
-                    }
-                }
-
             } else {
                 if (item_drops != null) {
                     for (ItemStack item_drop : item_drops) {
                         dropItems(item_drop.getType().toString(), item_drop.getAmount() * level, e.getEntity().getLocation());
                     }
-                } if (xp_drop > 0) {
+                }
+            }
+
+            if (spawner.isXPStorageEnabled()) {
+                if (xp_drop > 0) {
+                    int new_xp_amount = storage.getStoredXp() + xp_drop * level;
+                    if (new_xp_amount >= Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit")) {
+                        new_xp_amount = Main.getPlugin().getConfig().getInt("config.modules.storage-limit.xpLimit");
+                    }
+                    storage.setStoredXp(new_xp_amount);
+                }
+            } else {
+                if (xp_drop > 0) {
                     dropXP(e.getEntity().getLocation(), xp_drop);
                 }
             }
