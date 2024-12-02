@@ -1,0 +1,63 @@
+config:
+  version: ${project.version}
+  lang: en # Only 'en' (English), 'tr' (Turkish) and 'pl' (Polish) are supported right now.
+
+database:
+  # Do not change.
+  type: SQLITE
+
+spawners:
+  # Default spawner is for all mob spawners, you don't need to add every spawner
+  # one by one, default applies for all.
+  # --
+  # If you wish to create a mob spawner with different ranges and/or delays
+  # copy and paste this, change entity names and "default" to whatever you want.
+  default:
+    name: "&c&l{entity_name} &8-- &7Spawner"
+    lore:
+      - ""
+      - "&7 When placed, starts spawning "
+      - "&7 {entity_name} every now and then. "
+      - ""
+    spawnerInfo:
+      mode: ENTITY
+      material: {entity_name}
+      range: 16
+      delay: 8
+      sell_button: true
+
+  # This is an example Diamond spawner, copy and paste this to create
+  # your own item spawners.
+  diamond:
+    name: "&b&lDIAMOND &8-- &7Spawner"
+    lore:
+      - ""
+      - "&7 When placed, starts spawning "
+      - "&7 diamonds every now and then."
+      - ""
+    spawnerInfo:
+      mode: ITEM
+      material: DIAMOND
+      range: 16
+      delay: 8
+      sell_button: true
+      # NOTE: Details are only applicable to mode: ITEM spawners.
+      # and the storage function must be turned off to actually see the result.
+      # to turn off storage, go into your lang file, find storage, and set gui to false.
+      details:
+        name: "&bA cool diamond!"
+        lore:
+          - ""
+          - "&7This is a very cool diamond!"
+          - ""
+
+itemPrices:
+  # Price provider is where the plugin gets prices of materials
+  # from, this currently only supports 'CUSTOM', 'SHOPGUIPLUS'.
+  priceProvider: CUSTOM
+  # These work only if the price provider is 'CUSTOM'.
+  ROTTEN_FLESH: 0.4
+  BONE: 0.2
+  STRING: 1.2
+  ARROW: 0.3
+  DIAMOND: 2

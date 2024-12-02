@@ -1,0 +1,5 @@
+hologram:
+  # This module requires DecentHolograms plugin, if you don't have this plugin
+  # please disable the module, or it will cause problems.
+  enabled: true
+  hologram-height: 2.85

@@ -1,0 +1,271 @@
+menu:
+  menuName: "&8Menu spawnera"
+  menuRows: 5 # How many rows should the main menu be?
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # You could also set this to AIR if you don't want filler items.
+    name: "" # Name of filler items.
+  info:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmFkYzA0OGE3Y2U3OGY3ZGFkNzJhMDdkYTI3ZDg1YzA5MTY4ODFlNTUyMmVlZWQxZTNkYWYyMTdhMzhjMWEifX19
+    name: "&6&lINFORMACJE &8— &7Spawner"
+    lore:
+      - ""
+      - " &7Tutaj możesz zobaczyć wszystkie szczegóły"
+      - " &7tego spawnera."
+      - ""
+      - " &8• &7Typ: &6{type}"
+      - " &8• &7Poziom: &6{level}"
+      - " &8• &7Właściciel: &6{owner}"
+      - ""
+      - " &8• &7Aktywne boosty:"
+      - " &6{active_boosts}"
+      - ""
+    slot: 11
+  storage:
+    gui: true
+    material: CHEST
+    name: "&c&lMAGAZYN &8— &7Sprzedaj/Weź przedmioty"
+    lore:
+      - ""
+      - "&7 Kliknij tutaj, aby wziąć lub sprzedać przedmioty"
+      - "&7 z magazynu."
+      - ""
+      - " &8• &7Zgromadzone przedmioty: &c{amount}x"
+      - " &8• &7Mnożnik sprzedaży: &cx{multiplier}"
+      - ""
+    slot: 29
+  hologram:
+    gui: true # Requires DecentHolograms plugin
+    material: OAK_SIGN
+    name: "&9&lHOLOGRAM &8— &7Przełącz hologram"
+    lore:
+      - ""
+      - "&7 Kliknij tutaj, aby przełączyć "
+      - "&7 hologram spawnera"
+      - ""
+    slot: 32
+  auto-kill:
+    gui: true
+    material: IRON_SWORD
+    name: "&c&lAUTOKILL &8— &7Przełącz auto-kill"
+    lore:
+      - ""
+      - "&7 Funkcja &cauto-kill &7automatycznie"
+      - "&7 zabija wszystkie moby spawnowane przez "
+      - "&7 spawner i teleportuje ich łupy "
+      - "&7 do magazynu spawnera."
+      - ""
+      - "&7 Kliknij tutaj, aby przełączyć "
+      - "&7 funkcję auto-kill. "
+      - ""
+    slot: 28
+  friends:
+    gui: true
+    material: PLAYER_HEAD
+    name: "&a&lPRZYJACIELE &8— &7Zarządzaj przyjaciółmi"
+    lore:
+      - ""
+      - "&7 Dodaj przyjaciół do swoich spawnerów"
+      - "&7 aby przyznać im wszystkie uprawnienia"
+      - "&7 potrzebne do zarządzania Twoimi spawnerami"
+      - ""
+      - "&8 • &7Przyjaciele nie mogą:"
+      - "&8  • &7złamać spawnera."
+      - "&8  • &7dodawać innych przyjaciół."
+      - ""
+    slot: 33
+  level-up:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzA0MGZlODM2YTZjMmZiZDJjN2E5YzhlYzZiZTUxNzRmZGRmMWFjMjBmNTVlMzY2MTU2ZmE1ZjcxMmUxMCJ9fX0=
+    name: "&5&lPOZIOM &8— &7Ulepsz swój spawner!"
+    lore:
+      - ""
+      - "&7 Zamiast ustawiać spawnerów obok siebie"
+      - "&7 i zbierać łupy z każdego z osobna,"
+      - "&7 możesz je układać jeden na drugim"
+      - "&7 i nadal otrzymywać te same łupy, a zbieranie"
+      - "&7 jest znacznie łatwiejsze!"
+      - ""
+      - "&8 • &7Kliknij tutaj, aby &5ulepszyć &7swój spawner!"
+      - ""
+    slot: 15
+  exp:
+    gui: true
+    material: EXPERIENCE_BOTTLE
+    name: "&d&lDOŚWIADCZENIE &8— &7Zdobądź doświadczenie"
+    lore:
+      - ""
+      - "&7 Zdobądź całe XP zgromadzone w"
+      - "&7 tym spawnerze."
+      - ""
+      - "&8 • &7Otrzymasz: "
+      - "&d {experience} XP "
+      - ""
+    slot: 30
+  settings:
+    gui: true
+    material: ANVIL
+    name: "&e&lUSTAWIENIA &8— &7Zobacz ustawienia"
+    lore:
+      - ""
+      - "&7 Zobacz ustawienia tego spawnera"
+      - "&7 i edytuj je według własnych "
+      - "&7 preferencji."
+      - ""
+      - "&7 Możesz:"
+      - " &8 • &ePrzełączać wirtualny magazyn"
+      - " &8 • &ePrzełączać magazyn XP"
+      - ""
+    slot: 34
+
+settingsMenu:
+  menuRows: 3
+  menuName: "&lMenu Ustawień"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE
+    name: ""
+  virtual_storage:
+    material: CAULDRON
+    name: "&e&lWIRTUALNY MAGAZYN &8— &7Przełącz"
+    lore:
+      - ""
+      - "&7 Kliknij tutaj, aby przełączyć "
+      - "&7 wirtualny magazyn tego spawnera. "
+      - ""
+      - " &8 • &eWirtualny magazyn: &7{virtual_storage}"
+      - ""
+    slot: 12
+  xp_storage:
+    material: EXPERIENCE_BOTTLE
+    name: "&e&lMAGAZYN XP &8— &7Przełącz"
+    lore:
+      - ""
+      - "&7 Kliknij tutaj, aby przełączyć "
+      - "&7 magazyn doświadczenia tego spawnera. "
+      - ""
+      - " &8 • &eMagazyn XP: &7{xp_storage}"
+      - ""
+    slot: 14
+
+storageMenu:
+  menuRows: 3
+  menuName: "&lMenu Magazynu"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Ustaw na AIR, jeśli nie chcesz wypełniaczy.
+    name: ""
+  sellItem:
+    material: GOLD_INGOT
+    name: "&e&lSPRZEDAJ PRZEDMIOTY &8— &7Sprzedaj wszystko"
+    lore:
+      - ""
+      - "&7 Możesz sprzedać wszystko, co znajduje się "
+      - "&7 w magazynie tego spawnera, po prostu "
+      - "&7 klikając ten przycisk."
+      - ""
+      - "&8 • &7Aktywny mnożnik: &ex{multiplier} "
+      - "&8 • &7Sprzedając wszystkie przedmioty, zarobisz: "
+      - "&e ${money} "
+      - ""
+      - "&7 Kliknij &ehere &7aby sprzedać wszystkie przedmioty."
+      - ""
+    slot: 22
+  itemLores:
+    - ""
+    - "&7 Aktualnie masz &6{amount_type}x " # {amount_type} zwraca ilość przedmiotu aktualnie przechowywanego
+    - "&7 tego przedmiotu w magazynie."
+    - ""
+    - " &8• &7Limit magazynu: &6{storage_limit}"
+    - " &8[{storage_bar}&8]"
+    - ""
+    - " &8• &7Lewy przycisk, aby wziąć 64 "
+    - " &8• &7Prawy przycisk, aby wypełnić ekwipunek "
+    - ""
+
+friendsMenu:
+  menuName: "&lMenu Przyjaciół"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Ustaw na AIR, jeśli nie chcesz wypełniaczy.
+    name: ""
+  addItem:
+    material: DIAMOND
+    name: "&a&lDODAJ PRZYJACIELA &8— &7Kliknij tutaj"
+    lore:
+      - ""
+      - "&7 Jeśli chcesz dodać przyjaciela "
+      - "&7 do swojego spawnera, kliknij tutaj. "
+      - ""
+    slot: 49
+  friends:
+    lore:
+      - ""
+      - "&7 Kliknij tutaj, aby usunąć tego "
+      - "&7 gracza z listy przyjaciół. "
+      - ""
+
+
+lang:
+  prefix: "&8[&6ancSpawners&8] "
+  tookXP: "&7Pobrałeś &d{0} XP &7ze spawnera."
+  noXP: "&7Ten spawner nie ma żadnych przechowywanych XP."
+  tookItems: "&7Pobrałeś &6{0}x {1} &7ze spawnera."
+  soldItems: "&7Sprzedałeś &6{0}x &7przedmiotów i dodałeś &6${1} &7do swojego konta. &8(&7Mnożnik: &6x{2}&8)"
+  noItems: "&7Ten spawner nie ma żadnych przechowywanych przedmiotów."
+  givenSpawners: "&7Przekazałeś &6{0}x {1} &7do &6{2}&7!"
+  receivedSpawners: "&7Otrzymałeś &6{0}x {1}&7!"
+  playerNotFound: "&7Nie sądzę, żeby ten gracz był online."
+  reloadedConfig: "&7Konfiguracja została pomyślnie załadowana ponownie."
+  noPermission: "&7Nie masz wymaganych uprawnień do użycia tej funkcji."
+  enabledAutoKill: "&7Pomyślnie &awłączono &7moduł automatycznego zabijania."
+  disabledAutoKill: "&7Pomyślnie &cwyłączono &7moduł automatycznego zabijania."
+  addFriendMessage: "&7Wpisz nazwę przyjaciela, którego chcesz dodać do tego spawnera. Wpisz &c'cancel' &7aby anulować ten proces."
+  removedFriendFromSpawner: "&7Pomyślnie usunięto przyjaciela z tego spawnera."
+  cancelledProcess: "&7Pomyślnie anulowałeś proces."
+  successfullyAddedFriend: "&7Pomyślnie dodałeś przyjaciela do swojego spawnera."
+  placedSpawner: "&7Pomyślnie postawiłeś {0}&7!"
+  brokeSpawner: "&7Pomyślnie zniszczyłeś {0}&7!"
+  brokeWithLevels: "&7Pomyślnie zniszczyłeś poziom {0}&7!"
+  brokeAllLevels: "&7Pomyślnie zniszczyłeś wszystkie poziomy {0}&7!"
+  errorWithSpawner: "&7Ten spawner nie wydaje się być skonfigurowany, skontaktuj się z właścicielami serwera."
+  spawnerMaxLevel: "&7Ten spawner jest już na maksymalnym poziomie i nie może być już ulepszany."
+  offHandSpawner: "&7Nie możesz ulepszać spawnera, trzymając go w ręce pomocniczej."
+  notTheOwner: "&7Nie jesteś właścicielem tego spawnera."
+  noAccess: "&7Nie masz dostępu do tego spawnera."
+  levelUpSuccessful: "&7Pomyślnie dodałeś &d{0} poziomów &7do swojego spawnera."
+  noSpawnersFound: "&7Nie mogę znaleźć spawnerów pasujących do tego w twoim ekwipunku."
+  commandUsage: "&7Poprawne użycie: &6/ancspawners <give/reload> <gracz> <spawner> <ilość>"
+  spawnerNotFound: "&7Nie znaleziono tego spawnera w konfiguracji."
+  onlyOwnerTakeXP: "&7Tylko właściciel tego spawnera może wypłacić przechowywane w nim XP."
+  hologram:
+    - "&8(&f{level}x&8) {spawner}"
+    - ""
+    - "&a☻ ᴏᴡɴᴇʀ &7➡ &f{owner}"
+    - "&6❦ ꜱᴛᴏʀᴀɢᴇ &7➡ &f{storage_bar}"
+    - ""
+    - "&7&oRight-click to access menu."
+  enabledHologram: "&7Włączyłeś &ahologram &7spawnera."
+  disabledHologram: "&7Wyłączyłeś &chologram &7spawnera."
+  vanillaSpawnerBroken: "&7Pomyślnie zniszczyłeś klasyczny spawner."
+  vanillaSpawnerNotConfigured: "&7Ten klasyczny spawner nie został skonfigurowany, skontaktuj się z administratorami serwera."
+  vanillaSpawnerEntityNotFound: "&7Nie można znaleźć typu jednostki dla tego spawnera, skontaktuj się z autorem pluginu."
+  bypassBrokeSpawner: "&c&lADMIN BYPASS &8- &7Zniszczyłeś &c{0}x {1}&7, należący do: &c{2}"
+  silkTouchRequired: "&7Aby zniszczyć ten spawner, wymagany jest dotyk jedwabiu."
+  noSilkTouchSpawnerLost: "&7Ten spawner został utracony, ponieważ zniszczyłeś go bez dotyku jedwabiu."
+  sellItemsTitle: "&a{money_gained}$"
+  sellItemsSubtitle: "&fSprzedałeś zawartość magazynu swojego spawnera!"
+  takeXpTitle: "&6{xp_gained} XP"
+  takeXpSubtitle: "&fZdobyłeś punkty doświadczenia!"
+  toggledVirtualStorage: "&7Pomyślnie przełączyłeś stan wirtualnego magazynu!"
+  toggledXpStorage: "&7Pomyślnie przełączyłeś stan przechowywania doświadczenia!"
+  givenBoost: "&7Przekazałeś bonus &6{0} &7dla &6{1}&7!"
+  receivedBoost: "&7Otrzymałeś bonus &6{0}&7!"
+  boostNotFound: "&7Bonus &6{0} &7nie został znaleziony."
+  commandUsageGiveBoost: "&7Poprawne użycie: &6/ancspawners giveboost <gracz> <klucz_bonusu>"
+  commandUsageGive: "&7Poprawne użycie: &6/ancspawners give <gracz> <spawner> [ilość]"
+  chance: "&7Nie miałeś szczęścia, aby zdobyć ten spawner."
+  chanceByCount: "&7Utraciłeś &6{0} &7spawnerów w tym procesie."
+  boost_spawn_amount: "&7Ilość odradzania &8(&2+{0}&8) &8[&f{1}&8]"
+  boost_spawn_time: "&7Czas odradzania &8(&e{0}x&8) &8[&f{1}&8]"
+  boost_applied: "&7Pomyślnie zastosowałeś bonus: {0} &7do tego spawnera!"
+  spawner_not_managed: "&7Ten spawner nie jest zarządzany przez ancSpawners."
+  no_active_boosts: "&7Brak aktywnych bonusów."
+  boost_already_active: "&7Bonus tego samego typu jest już aktywny."

@@ -1,0 +1,29 @@
+boosts:
+  enabled: true
+  list:
+    boost1:
+      material: "DIAMOND"
+      type: "SPAWN_AMOUNT"
+      amount: 2
+      duration: "1d"
+      name: "&e&lBOOST &8- &f1 days"
+      lore:
+        - ""
+        - "&7 Applying this boost to "
+        - "&7 your spawner will make your "
+        - "&7 spawner spawn &a+2 mobs "
+        - "&7 on each spawn. "
+        - ""
+    boost2:
+      material: "EMERALD"
+      type: "SPAWN_TIME"
+      amount: 4
+      duration: "12h"
+      name: "&a&lBOOST &8- &f12 hours"
+      lore:
+        - ""
+        - "&7 Applying this boost to "
+        - "&7 your spawner will make your "
+        - "&7 spawner spawn &a4x faster "
+        - "&7 Use it wisely. "
+        - ""

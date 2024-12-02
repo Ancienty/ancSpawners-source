@@ -1,0 +1,15 @@
+virtual-storage:
+  # Should virtual storage be enabled for newly placed spawners?
+  # Set to 'false' if you don't want this.
+  # If you set 'gui: false' in the lang files, please set default to false, and force-default to true.
+  default: true
+  # Do you want to force default value?
+  # Players will not be able to change this no matter what.
+  force-default: false
+  # Players will need this permission to toggle virtual storage for their spawners.
+  permission: ancspawners.settings.togglestorage
+
+xp-storage:
+  default: true
+  force-default: false
+  permission: ancspawners.settings.togglexp

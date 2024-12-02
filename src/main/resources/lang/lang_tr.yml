@@ -1,0 +1,271 @@
+menu:
+  menuName: "&lDoğurucu Menüsü"
+  menuRows: 5 # How many rows should the main menu be?
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # You could also set this to AIR if you don't want filler items.
+    name: "" # Name of filler items.
+  info:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmFkYzA0OGE3Y2U3OGY3ZGFkNzJhMDdkYTI3ZDg1YzA5MTY4ODFlNTUyMmVlZWQxZTNkYWYyMTdhMzhjMWEifX19
+    name: "&6&lBILGI &8— &7Doğurucu"
+    lore:
+      - ""
+      - " &7Burada, bu doğurucuya ait bütün "
+      - " &7bilgileri görüntüleyebilirsin."
+      - ""
+      - " &8• &7Tür: &6{type}"
+      - " &8• &7Seviye: &6{level}"
+      - " &8• &7Sahip: &6{owner}"
+      - ""
+      - " &8• &7Aktif takviyeler:"
+      - " &6{active_boosts}"
+      - ""
+    slot: 11
+  storage:
+    gui: true
+    material: CHEST
+    name: "&c&lDEPO &8— &7Eşya al/sat"
+    lore:
+      - ""
+      - "&7 Depodan eşya almak veya satmak "
+      - "&7 için buraya tıkla."
+      - ""
+      - " &8• &7Depodaki eşya: &c{amount}x"
+      - " &8• &7Satış çarpanı: &cx{multiplier}"
+      - ""
+    slot: 29
+  hologram:
+    gui: true # Requires DecentHolograms plugin
+    material: OAK_SIGN
+    name: "&9&lHOLOGRAM &8— &7Hologramı kapat/aç"
+    lore:
+      - ""
+      - "&7 Hologramı kapatıp açmak "
+      - "&7 için buraya tıkla. "
+      - ""
+    slot: 32
+  auto-kill:
+    gui: true
+    material: IRON_SWORD
+    name: "&c&lOTO-ÖLDÜRME &8— &7Kapat/aç"
+    lore:
+      - ""
+      - "&7 &cOto-öldürme &7özelliği, doğurucudan "
+      - "&7 doğan bütün yaratıkları anında öldürür "
+      - "&7 ve düşen eşyaları direkt doğurucunun "
+      - "&7 deposuna taşır."
+      - ""
+      - " &7Bu özelliği kapatıp açmak "
+      - " &7için buraya tıkla."
+      - ""
+    slot: 28
+  friends:
+    gui: true
+    material: PLAYER_HEAD
+    name: "&a&lARKADAŞ &8— &7Arkadaşları yönet"
+    lore:
+      - ""
+      - "&7 Arkadaşlarına bu doğurucu üzerinde "
+      - "&7 gereken bütün yetkileri vermek için "
+      - "&7 arkadaş olarak ekle."
+      - ""
+      - "&8 • &7Arkadaşlar şunları yapamaz:"
+      - "&8  • &7doğurucuyu kırmak."
+      - "&8  • &7başka arkadaşlar eklemek."
+      - ""
+    slot: 33
+  level-up:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzA0MGZlODM2YTZjMmZiZDJjN2E5YzhlYzZiZTUxNzRmZGRmMWFjMjBmNTVlMzY2MTU2ZmE1ZjcxMmUxMCJ9fX0=
+    name: "&5&lSEVİYE &8— &7Doğurucunu güçlendir!"
+    lore:
+      - ""
+      - "&7 Bir sürü doğurucu yanyana koymak ve "
+      - "&7 bütün bu doğurucuların depolarını teker "
+      - "&7 teker toplamak yerine, hepsini bir doğurucu "
+      - "&7 içerisinde birleştir. Elde edeceğin eşya "
+      - "&7 sayısı aynı kalacaktır."
+      - ""
+      - "&8 • &7Doğurucunun seviyesini &5yükseltmek &7için tıkla."
+      - ""
+    slot: 15
+  exp:
+    gui: true
+    material: EXPERIENCE_BOTTLE
+    name: "&d&lTECRÜBE &8— &7Tecrübe al"
+    lore:
+      - ""
+      - "&7 Doğurucuda depolanmış tecrübeyi "
+      - "&7 almak için tıkla. "
+      - ""
+      - "&8 • &7Alacağın tecrübe: "
+      - "&d {experience} XP "
+      - ""
+    slot: 30
+  settings:
+    gui: true
+    material: ANVIL
+    name: "&e&lAYARLAR &8— &7Ayarları Görüntüle"
+    lore:
+      - ""
+      - "&7 Bu doğurucunun ayarlarını "
+      - "&7 görüntüleyin ve istediğiniz "
+      - "&7 gibi düzenleyin."
+      - ""
+      - "&7 Yapabilecekleriniz:"
+      - " &8 • &eSanal depolamayı değiştir "
+      - " &8 • &eXP depolamayı değiştir "
+      - ""
+    slot: 34
+
+settingsMenu:
+  menuRows: 3
+  menuName: "&lAyarlar Menüsü"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE
+    name: ""
+  virtual_storage:
+    material: CAULDRON
+    name: "&e&lSANAL DEPOLAMA &8— &7Değiştir"
+    lore:
+      - ""
+      - "&7 Sanal depolamayı "
+      - "&7 değiştirmek için buraya tıklayın. "
+      - ""
+      - " &8 • &eSanal depolama: &7{virtual_storage}"
+      - ""
+    slot: 12
+  xp_storage:
+    material: EXPERIENCE_BOTTLE
+    name: "&e&lXP DEPOLAMA &8— &7Değiştir"
+    lore:
+      - ""
+      - "&7 Deneyim depolamayı "
+      - "&7 değiştirmek için buraya tıklayın. "
+      - ""
+      - " &8 • &eDeneyim depolama: &7{xp_storage}"
+      - ""
+    slot: 14
+
+
+storageMenu:
+  menuRows: 3
+  menuName: "&lDepo Menüsü"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Set to AIR if you don't want filler items.
+    name: ""
+  sellItem:
+    material: GOLD_INGOT
+    name: "&e&lEŞYALARI SAT &8— &7Her şeyi sat"
+    lore:
+      - ""
+      - "&7 Bu doğurucuda depolanmış her şeyi "
+      - "&7 bu butona tıklayarak satabilirsin. "
+      - ""
+      - "&8 • &7Aktif çarpan: &ex{multiplier} "
+      - "&8 • &7Bütün eşyaları satınca alacağın: "
+      - "&e ${money} "
+      - ""
+      - "&7 Bütün eşyaları satmak için &eburaya &7tıkla."
+      - ""
+    slot: 22
+  itemLores:
+    - ""
+    - "&7 Depoda bu eşyadan &6{amount_type}x " # {amount_type} returns the amount of an item currently stored
+    - "&7 adet bulunmakta."
+    - ""
+    - " &8• &7Depo limiti: &6{storage_limit}"
+    - " &8[{storage_bar}&8]"
+    - ""
+    - " &8• &764x almak için sol tıkla "
+    - " &8• &7Envanterini doldurmak için sağ tıkla "
+    - ""
+
+friendsMenu:
+  menuName: "&lArkadaş Menüsü"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Set to AIR if you don't want filler items.
+    name: ""
+  addItem:
+    material: DIAMOND
+    name: "&a&lARKADAŞ EKLE &8— &7Buraya tıkla"
+    lore:
+      - ""
+      - "&7 Doğurucuna arkadaş eklemek "
+      - "&7 istiyorsan, buraya tıkla. "
+      - ""
+    slot: 49
+  friends:
+    lore:
+      - ""
+      - "&7 Bu arkadaşını doğurucudan çıkartmak "
+      - "&7 istiyorsan buraya tıkla. "
+      - ""
+
+
+lang:
+  prefix: "&8[&6ancSpawners&8] "
+  tookXP: "&7Doğurucudan &d{0} XP &7aldın."
+  noXP: "&7Bu doğurucuda depolanmış XP bulunmuyor."
+  tookItems: "&7Doğurucudan &6{0}x {1} &7aldın."
+  soldItems: "&7Depodan &6{0}x &7eşya sattın ve &6${1} &7para hesabına eklendi."
+  noItems: "&7Bu doğurucunun deposunda herhangi bir eşya bulunmuyor."
+  givenSpawners: "&6{0}x {1} &7doğurucusunu &6{2} &7adlı oyuncuya verdin."
+  receivedSpawners: "&7Sana &6{0}x {1} &7doğurucusu verildi."
+  playerNotFound: "&7Bu oyuncunun aktif olduğunu düşünmüyorum."
+  reloadedConfig: "&7Config dosyaları başarıyla yeniden yüklendi."
+  noPermission: "&7Bu özelliği kullanmak için gereken yetkiye sahip değilsin."
+  enabledAutoKill: "&7Otomatik öldürme modülünü &aaktif &7hale getirdin."
+  disabledAutoKill: "&7Otomatik öldürme modülünü &cinaktif &7hale getirdin."
+  addFriendMessage: "&7Bu doğurucuya eklemek istediğin arkadaşının adını sohbete yaz. İptal etmek için &c'cancel' &7yazabilirsin."
+  removedFriendFromSpawner: "&7Başarıyla bu doğurucudan bir arkadaşını kaldırdın."
+  cancelledProcess: "&7Başarıyla işlemi iptal ettin."
+  successfullyAddedFriend: "&7Başarıyla bir arkadaşını bu doğurucuya ekledin."
+  placedSpawner: "&7Başarıyla bir {0} &7yerleştirdin."
+  brokeSpawner: "&7Başarıyla bir {0} &7kırdın."
+  brokeWithLevels: "&7Başarıyla {0}&7'dan bir seviye kırdın."
+  brokeAllLevels: "&7Başarıyla {0}&7'dan bütün seviyeleri kırdın."
+  errorWithSpawner: "&7Bu doğurucunun ayarları yapılmamış, lütfen sunucu sahipleri ile iletişime geç."
+  spawnerMaxLevel: "&7Bu doğurucu zaten yükseltilebileceği en yüksek seviyede, daha fazla yükseltilemez."
+  offHandSpawner: "&7İkinci elinde bir doğurucu varken seviye yükseltme işlemi yapamazsın."
+  notTheOwner: "&7Bu doğurucunun sahibi sen değilsin."
+  noAccess: "&7Bu doğurucuya erişimin olduğunu düşünmüyorum."
+  levelUpSuccessful: "&7Başarıyla doğurucuna &d{0} seviye &7ekledin."
+  noSpawnersFound: "&7Envanterinde, bu doğurucu ile aynı türde hiçbir doğurucu bulamadım."
+  commandUsage: "&7Doğru kullanım: &6/ancspawners <give/reload> <oyuncu> <doğurucu> <miktar>"
+  spawnerNotFound: "&7Yapılandırma dosyasında böyle bir doğurucu bulamadım."
+  onlyOwnerTakeXP: "&7Yalnızca bu doğurucunun sahibi, içerisinde birikmiş XP'yi alabilir."
+  hologram:
+    - "&8(&f{level}x&8) {spawner}"
+    - ""
+    - "&a☻ ꜱᴀʜɪᴘ &7➡ &6{owner}"
+    - "&6❦ ᴅᴇᴘᴏ &7➡ &6{storage_bar}"
+    - ""
+    - "&7&oMenüye erişmek için sağ tıkla."
+  enabledHologram: "&7Başarıyla doğurucu hologramını &aaktif &7hale getirdin."
+  disabledHologram: "&7Başarıyla doğurucu hologramını &cinaktif &7hale getirdin."
+  vanillaSpawnerBroken: "&7Başarıyla bir vanilla doğurucuyu kırdın."
+  vanillaSpawnerNotConfigured: "&7Bu vanilla doğurucunun ayarları henüz yapılmamış, sunucu geliştiricisiyle iletişime geçin."
+  vanillaSpawnerEntityNotFound: "&7Bu vanilla doğurucunun mob'u bulunamadı, lütfen eklenti geliştiricisiyle iletişime geçin."
+  bypassBrokeSpawner: "&c&lADMIN BYPASS &8- &c{0}x {1}&7 kırdın, ait olduğu kişi: &c{2}"
+  silkTouchRequired: "&7Bu doğurucuyu kırmak için ipeksi dokunuş gerekmekte."
+  noSilkTouchSpawnerLost: "&7İpeksi dokunuş olmadan bu doğurucuyu kırdığın için, doğurucu kayboldu."
+  sellItemsTitle: "&a{money_gained}$"
+  sellItemsSubtitle: "&fDoğurucu deposunu sattın!"
+  takeXpTitle: "&6{xp_gained} XP"
+  takeXpSubtitle: "&fTecrübe puanı kazandın!"
+  toggledVirtualStorage: "&7Sanal depolamayı başarıyla değiştirdiniz!"
+  toggledXpStorage: "&7Deneyim depolamayı başarıyla değiştirdiniz!"
+  givenBoost: "&6{1} &7adlı oyuncuya &6{0} &7takviyesini verdin!"
+  receivedBoost: "&7Sana şu takviye verildi: &6{0}&7!"
+  boostNotFound: "&7Bu takviye: &6{0} &7bulunamadı."
+  commandUsageGiveBoost: "&7Doğru kullanım: &6/ancspawners giveboost <oyuncu> <takviye adı>"
+  commandUsageGive: "&7Doğru kullanım: &6/ancspawners give <oyuncu> <doğurucu> [miktar]"
+  chance: "&7Maalesef ki bu doğurucuyu alabilecek kadar şanslı değildin."
+  chanceByCount: "&7Bu süreçte &6{0} &7doğurucu kaybettin."
+  boost_spawn_amount: "&7Spawn Adeti &8(&2+{0}&8)"
+  boost_spawn_time: "&7Spawn Süresi &8(&e{0}x&8)"
+  boost_applied: "&7Başarıyla bu takviyeyi: {0} &7doğurucuya uyguladın!"
+  spawner_not_managed: "&7Bu doğurucu ancSpawners ile yönetilmiyor."
+  no_active_boosts: "&7Aktif takviye bulunamadı."
+  boost_already_active: "&7Aynı türde takviye zaten bu doğurucuda aktif."

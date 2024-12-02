@@ -1,0 +1,9 @@
+multipliers:
+  # Sell multipliers are also permission based, please note that you MUST keep
+  # these values in ascending order, or it might not work as intended for players
+  # which have more than one of these permissions.
+  enabled: true
+  permissions:
+    # Format: 'permission': 'multiplier'
+    ancspawners-1-25x: 1.25
+    ancspawners-1-50x: 1.50

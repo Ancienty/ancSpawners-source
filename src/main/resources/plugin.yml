@@ -1,0 +1,8 @@
+name: ancSpawners
+version: '${project.version}'
+main: com.ancienty.ancspawnersrecoded.Main
+api-version: '1.13'
+load: POSTWORLD
+author: Ancienty
+depend: [Vault, NBTAPI]
+softdepend: [DecentHolograms, WorldGuard, SuperiorSkyblock2, LiteEconomy, CMI, CMILib, BlockLocker, WildLoaders, Lands, SuperMobCoins, FabledSkyBlock, Towny, ItemsAdder, FactionsUUID, Multiverse-Core, ShopGUIPlus, EconomyShopGUI, EconomyShopGUI-Premium, ProtectionStones, GriefPrevention, PlotSquared, EpicCore]
