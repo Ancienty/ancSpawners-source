@@ -1,7 +1,5 @@
 package com.ancienty.ancspawnersrecoded.Database;
 
-import javax.annotation.Nullable;
-
 public class DatabaseTask {
 
     private String query;

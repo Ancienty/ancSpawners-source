@@ -5,9 +5,7 @@ import com.ancienty.ancspawnersrecoded.Main;
 import com.ancienty.ancspawnersrecoded.Utils.ItemStackUtils;
 import com.cryptomorin.xseries.XMaterial;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -15,11 +13,9 @@ import org.bukkit.inventory.ItemStack;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ancStorage {

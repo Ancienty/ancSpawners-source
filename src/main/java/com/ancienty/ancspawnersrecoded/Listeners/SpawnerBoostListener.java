@@ -4,7 +4,6 @@ import com.ancienty.ancspawnersrecoded.Database.DatabaseTask;
 import com.ancienty.ancspawnersrecoded.Main;
 import com.ancienty.ancspawnersrecoded.SpawnerManager.ancSpawner;
 import de.tr7zw.nbtapi.NBTItem;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;

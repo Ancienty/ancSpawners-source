@@ -1,7 +1,6 @@
 package com.ancienty.ancspawnersrecoded;
 
 import com.ancienty.ancspawnersrecoded.Commands.SpawnerCommand;
-import com.ancienty.ancspawnersrecoded.Database.DatabaseTask;
 import com.ancienty.ancspawnersrecoded.Database.SQLProcessing;
 import com.ancienty.ancspawnersrecoded.Database.SQLite;
 import com.ancienty.ancspawnersrecoded.GUIs.Listeners.SpawnerClickListener;
@@ -16,17 +15,11 @@ import com.ancienty.ancspawnersrecoded.SpawnerManager.ancSpawner;
 import com.ancienty.ancspawnersrecoded.SpawnerManager.ancStorage;
 import com.ancienty.ancspawnersrecoded.Support.Editors.HologramEditor;
 import com.ancienty.ancspawnersrecoded.Utils.*;
-import com.cryptomorin.xseries.XEntity;
-import com.cryptomorin.xseries.XEntityType;
 import com.cryptomorin.xseries.XMaterial;
 import com.cryptomorin.xseries.profiles.builder.XSkull;
 import com.cryptomorin.xseries.profiles.objects.Profileable;
-import com.mojang.authlib.GameProfile;
-import com.mojang.authlib.properties.Property;
-import com.mojang.authlib.properties.PropertyMap;
 import de.tr7zw.nbtapi.NBT;
 import de.tr7zw.nbtapi.iface.ReadableNBT;
-import de.tr7zw.nbtapi.utils.MinecraftVersion;
 import net.brcdev.shopgui.ShopGuiPlusApi;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.permission.Permission;
@@ -44,18 +37,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 
 public final class Main extends JavaPlugin {
 
@@ -382,7 +365,7 @@ public final class Main extends JavaPlugin {
     public void updateSpawnerHologram(Player player, Block block, @Nullable Boolean is_silent) {
         if (getServer().getPluginManager().getPlugin("DecentHolograms") != null && getServer().getPluginManager().getPlugin("DecentHolograms").isEnabled()) {
             if (getHologramModule().getBoolean("hologram.enabled")) {
-                hologramEditor.updateHologram(block);
+                HologramEditor.updateHologram(block);
             }
         }
     }
