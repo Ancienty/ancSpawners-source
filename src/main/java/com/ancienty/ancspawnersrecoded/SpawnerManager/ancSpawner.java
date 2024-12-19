@@ -55,7 +55,7 @@ public class ancSpawner {
                 Main.getPlugin().getSpawnerManager().getLocation(this)
         });
 
-        Main.getPlugin().executeDatabaseQuery(loadFriendsTask, resultSet -> {
+        Main.getPlugin().getSqlProcessing().executeDatabaseQuery(loadFriendsTask, resultSet -> {
             try {
                 while (resultSet.next()) {
                     friend_uuids.add(resultSet.getString("uuid"));

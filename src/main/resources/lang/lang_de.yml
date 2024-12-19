@@ -1,0 +1,270 @@
+menu:
+  menuName: "&lSpawner Menü"
+  menuRows: 5 # How many rows should the main menu be?
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # You could also set this to AIR if you don't want filler items.
+    name: "" # Name of filler items.
+  info:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmFkYzA0OGE3Y2U3OGY3ZGFkNzJhMDdkYTI3ZDg1YzA5MTY4ODFlNTUyMmVlZWQxZTNkYWYyMTdhMzhjMWEifX19
+    name: "&6&lINFORMATION &8— &7Spawner"
+    lore:
+      - ""
+      - " &7Informationen "
+      - " &7zu diesem Spawner."
+      - ""
+      - " &8• &7Typ: &6{type}"
+      - " &8• &7Level: &6{level}"
+      - " &8• &7Besitzer: &6{owner}"
+      - ""
+      - " &8• &7Active Booster:"
+      - " &6{active_boosts}"
+      - ""
+    slot: 11
+  storage:
+    gui: true
+    material: CHEST
+    name: "&c&lLager &8— &7Verkaufe/nehme Items"
+    lore:
+      - ""
+      - "&7 Hier drücken um Items aus dem Lager "
+      - "&7 zu nehmen oder zu verkaufen."
+      - ""
+      - " &8• &7Items gelagert: &c{amount}x"
+      - " &8• &7Verkaufs-multiplikator: &cx{multiplier}"
+      - ""
+    slot: 29
+  hologram:
+    gui: true # Requires DecentHolograms plugin
+    material: OAK_SIGN
+    name: "&9&lHOLOGRAM &8— &7Holagram an/ausschalten"
+    lore:
+      - ""
+      - "&7 Hier drücken um das Hologram "
+      - "&7 an/auszuschalten."
+      - ""
+    slot: 32
+  auto-kill:
+    gui: true
+    material: IRON_SWORD
+    name: "&c&lAUTOKILL &8— &7Auto-kill an/ausschalten"
+    lore:
+      - ""
+      - "&7 Das &cAuto-kill &7feature tötet "
+      - "&7 alle Mobs dieses Spawners "
+      - "&7 und Sammelt die Items "
+      - "&7 in das Lager."
+      - ""
+      - "&7 Hier drücken um Autokill "
+      - "&7 an/auszuschalten. "
+      - ""
+    slot: 28
+  friends:
+    gui: true
+    material: PLAYER_HEAD
+    name: "&a&lFREUNDE &8— &7Freunde verwalten"
+    lore:
+      - ""
+      - "&7 Füge Freunde hinzu und "
+      - "&7 gebe ihnen das Recht deinen "
+      - "&7 Spawner zu kontrollieren. "
+      - ""
+      - "&8 • &7Freunde können nicht:"
+      - "&8  • &7Den Spawner zerstören."
+      - "&8  • &7andere Freunde hinzufügen."
+      - ""
+    slot: 33
+  level-up:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzA0MGZlODM2YTZjMmZiZDJjN2E5YzhlYzZiZTUxNzRmZGRmMWFjMjBmNTVlMzY2MTU2ZmE1ZjcxMmUxMCJ9fX0=
+    name: "&5&lLEVEL UP &8— &7Verbessere deinen Spawner!"
+    lore:
+      - ""
+      - "&7 Anstatt Spawner nebeneinander zu platzieren "
+      - "&7 kannst du sie ineinander Stapeln und "
+      - "&7 die selbe Menge an Items erhalten "
+      - "&7 und das Sammeln ist "
+      - "&7 viel einfacher!"
+      - ""
+      - "&8 • &7Hier drücken um deinen Spawner &5aufzuleveln"
+      - ""
+    slot: 15
+  exp:
+    gui: true
+    material: EXPERIENCE_BOTTLE
+    name: "&d&lErfahrung &8— &7Sammle Erfahrung"
+    lore:
+      - ""
+      - "&7 Lagere die Erfahrung direkt "
+      - "&7 im Spawner. "
+      - ""
+      - "&8 • &7Du erhälst: "
+      - "&d {experience} XP "
+      - ""
+    slot: 30
+  settings:
+    gui: true
+    material: ANVIL
+    name: "&e&lEinstellungen &8— &7Siehe Einstellungen"
+    lore:
+      - ""
+      - "&7 Bearbeite die Einstellungen "
+      - "&7 dieses Spawners. "
+      - ""
+      - "&7 Du kannst:"
+      - " &8 • &eDas Lager ein/ausschalten "
+      - " &8 • &eDas Erfahrungslager ein/ausschalten "
+      - ""
+    slot: 34
+
+settingsMenu:
+  menuRows: 3
+  menuName: "&lEinstellungs-Menü"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE
+    name: ""
+  virtual_storage:
+    material: CAULDRON
+    name: "&e&lVIRTUELLES LAGER &8— &7ein/ausschalten"
+    lore:
+      - ""
+      - "&7 Drücke hier um das Virtuelle "
+      - "&7 lager ein/auszuschalten. "
+      - ""
+      - " &8 • &eVirtuelles Lager: &7{virtual_storage}"
+      - ""
+    slot: 12
+  xp_storage:
+    material: EXPERIENCE_BOTTLE
+    name: "&e&lXP Lager &8— &7ein/ausschalten"
+    lore:
+      - ""
+      - "&7 Drücke hier um das Erfahrungs-lager "
+      - "&7 ein/auszuschalten. "
+      - ""
+      - " &8 • &eErfahrungslager: &7{xp_storage}"
+      - ""
+    slot: 14
+
+storageMenu:
+  menuRows: 3
+  menuName: "&lLager Menü"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Set to AIR if you don't want filler items.
+    name: ""
+  sellItem:
+    material: GOLD_INGOT
+    name: "&e&lGegenstände verkaufen &8— &7Alles verkaufen"
+    lore:
+      - ""
+      - "&7 Du kannst alle Gegenstände "
+      - "&7 in diesem Spawner verkaufen "
+      - "&7 indem du hier drückst."
+      - ""
+      - "&8 • &7Aktive Multiplikatoren: &ex{multiplier} "
+      - "&8 • &7Alles zu verkaufen bringt: "
+      - "&e ${money} "
+      - ""
+      - "&7 Drücke &ehier &7um alles zu verkaufen."
+      - ""
+    slot: 22
+  itemLores:
+    - ""
+    - "&7 Du hast &6{amount_type}x " # {amount_type} returns the amount of an item currently stored
+    - "&7 von diesem Gegenstand gelagert."
+    - ""
+    - " &8• &7Lager Kapazität: &6{storage_limit}"
+    - " &8[{storage_bar}&8]"
+    - ""
+    - " &8• &7Links-klick um 64 zu nehmen "
+    - " &8• &7Rechts-klick um dein Inventar zu füllen "
+    - ""
+
+friendsMenu:
+  menuName: "&lFreunde Menü"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Set to AIR if you don't want filler items.
+    name: ""
+  addItem:
+    material: DIAMOND
+    name: "&a&lFreund hinzufügen &8— &7Drücke hier"
+    lore:
+      - ""
+      - "&7 Um einen Freund zum Spawner "
+      - "&7 hinzuzufügen, drücke hier. "
+      - ""
+    slot: 49
+  friends:
+    lore:
+      - ""
+      - "&7 Drücke hier um diesen "
+      - "&7 Spieler zu entfernen. "
+      - ""
+
+
+lang:
+  prefix: "&8[&6ancSpawners&8] "
+  tookXP: "&7Du hast &d{0} XP &7bekommen."
+  noXP: "&7In diesem Spawner ist keine Erfahrung."
+  tookItems: "&7Du hast &6{0}x {1} &7bekommen."
+  soldItems: "&7Du hast &6{0}x &7Gegenstände verkauft und &6${1} &7bekommen. &8(&7Multiplier: &6x{2}&8)"
+  noItems: "&7Dieser Spawner ist leer."
+  givenSpawners: "&7Du hast &6{0}x {1} &7an &6{2}&7gegeben!"
+  receivedSpawners: "&7Dir wurden &6{0}x {1}&7hinzugefügt!"
+  playerNotFound: "&7Dieser Spieler ist offline."
+  reloadedConfig: "&7Konfiguration erfolgreich geladen."
+  noPermission: "&7Du hast keine Rechte für diese Funktion."
+  enabledAutoKill: "&7Du hast erfolgreich &7Autokill &caktiviert."
+  disabledAutoKill: "&7Du hast erfolgreich &7Autokill &cdeaktiviert."
+  addFriendMessage: "&7Geben den Namen des Spielers ein um in hinzuzufügen. Gebe &c'cancel' &7ein um abzubrechen."
+  removedFriendFromSpawner: "&7Du hast erfolgreich einen Spieler entfernt."
+  cancelledProcess: "&7Du hast erfolgreich abgebrochen."
+  successfullyAddedFriend: "&7Du hast erfolgreich einen Freund hinzugefügt."
+  placedSpawner: "&7Du hast erfolgreich einen {0}&7platziert!"
+  brokeSpawner: "&7Du hast erfolgreich einen {0}&7zerstört!"
+  brokeWithLevels: "&7Du hast das nächste level von {0}&7erreicht!"
+  brokeAllLevels: "&7Du hast das höchste level von {0}&7erreicht!"
+  errorWithSpawner: "&7Dieser Spawner wurde nicht konfiguriert, bitte kontaktiere einen Administrator."
+  spawnerMaxLevel: "&7Dieser Spawner hat bereits das maximale Level erreicht."
+  offHandSpawner: "&7Du musst den Spawner aus deiner linken Hand nehmen."
+  notTheOwner: "&7Du bist nicht besitzer dieses Spawners."
+  noAccess: "&7Du hast keinen Zugriff auf diesen Spawner."
+  levelUpSuccessful: "&7Du hast erfolgreich &d{0} Level &7hinzugefügt."
+  noSpawnersFound: "&7Ich konnte keine passenden Spawner in deinem Inventar finden."
+  commandUsage: "&7Korrekte nutzung: &6/ancspawners <give/reload> <Spieler> <Spawner> <Menge>"
+  spawnerNotFound: "&7Dieser Spawner wurde nicht konfiguriert."
+  onlyOwnerTakeXP: "&7Nur der Besiter dieses Spawners kann die Erfahrung sammeln."
+  hologram:
+    - "&8(&f{level}x&8) {spawner}"
+    - ""
+    - "&a☻ Besitzer &7➡ &f{owner}"
+    - "&6❦ Lager &7➡ &f{storage_bar}"
+    - ""
+    - "&7&oRechts-klick für das Menü."
+  enabledHologram: "&7Du hast das Hologram &aeingeschaltet &7."
+  disabledHologram: "&7Du hast das Hologram &causgeschaltet &7."
+  vanillaSpawnerBroken: "&7Du hast erfolgreiche einen vanilla Spawner zerstört."
+  vanillaSpawnerNotConfigured: "&7Dieser vanilla Spawner wurde noch nicht konfiguriert, bitte kontaktiere einen Administrator."
+  vanillaSpawnerEntityNotFound: "&7Der Typ dieses Spawners konnte nicht gefunden werden, bitte kontaktiere den Entwickler."
+  bypassBrokeSpawner: "&c&lADMIN RECHTE &8- &7Du hast gerade &c{0}x {1}&7, von: &c{2} &7zerstört."
+  silkTouchRequired: "&7Du brauchst Behutsamkeit um diesen Spawner zu zerstören."
+  noSilkTouchSpawnerLost: "&7Dieser Spawner ist verloren, da du ihn ohne Behutsamkeit zerstört hast."
+  sellItemsTitle: "&a{money_gained}$"
+  sellItemsSubtitle: "&fDu hast dein Lager verkauft!"
+  takeXpTitle: "&6{xp_gained} XP"
+  takeXpSubtitle: "&fDu hast Erfahrungspunkte erhalten!"
+  toggledVirtualStorage: "&7Du hast erfolgreich das Lager ein/ausgeschalten!"
+  toggledXpStorage: "&7Du hast erfolgreich das Erfahrungs-lager ein/ausgeschalten!"
+  givenBoost: "&7Du hast einen Booster erhalten &6{0} &7to &6{1}&7!"
+  receivedBoost: "&7Du hast einen Booster erhalten &6{0}&7!"
+  boostNotFound: "&7Boost &6{0} &7nicht gefunden."
+  commandUsageGiveBoost: "&7Korrekte Nutzung: &6/ancspawners giveboost <Spieler> <boost_key>"
+  commandUsageGive: "&7Korrekte Nutzung: &6/ancspawners give <Spieler> <spawner> [Menge]"
+  chance: "&7Du hast leider Pech, der Spawner ist verloren."
+  chanceByCount: "&7Du hast &6{0} &7Spawner im Prozess verloren."
+  boost_spawn_amount: "&7Spawn Menge &8(&2+{0}&8) &8[&f{1}&8]"
+  boost_spawn_time: "&7Spawn Zeit &8(&e{0}x&8) &8[&f{1}&8]"
+  boost_applied: "&7Du hast erfolgreich: {0} &7Booster hinzugefügt!"
+  spawner_not_managed: "&7Dieser Spawner wird nicht von Ancspawners verwaltet."
+  no_active_boosts: "&7Keine aktiven Booster."
+  boost_already_active: "&7Ein Booster vom selben Typ ist bereits aktiv."

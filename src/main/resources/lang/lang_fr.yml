@@ -1,0 +1,271 @@
+menu:
+  menuName: "&lMenu du Spawner"
+  menuRows: 5 # How many rows should the main menu be?
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # You could also set this to AIR if you don't want filler items.
+    name: "" # Name of filler items.
+  info:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvYmFkYzA0OGE3Y2U3OGY3ZGFkNzJhMDdkYTI3ZDg1YzA5MTY4ODFlNTUyMmVlZWQxZTNkYWYyMTdhMzhjMWEifX19
+    name: "&6&lINFORMATION &8— &7Spawner"
+    lore:
+      - ""
+      - " &7Ici vous pouvez voir les détails "
+      - " &7de ce spawner."
+      - ""
+      - " &8• &7Type: &6{type}"
+      - " &8• &7Niveau: &6{level}"
+      - " &8• &7Possesseur: &6{owner}"
+      - ""
+      - " &8• &7Améliorations actives:"
+      - " &6{active_boosts}"
+      - ""
+    slot: 11
+  storage:
+    gui: true
+    material: CHEST
+    name: "&c&lSTOCKAGE &8— &7Vendre/Prendre les Items"
+    lore:
+      - ""
+      - "&7 Cliquez ici pour prendre ou vendre les items "
+      - "&7 de ce stockage."
+      - ""
+      - " &8• &7Items stockés: &c{amount}x"
+      - " &8• &7Multiplicateur de vente: &cx{multiplier}"
+      - ""
+    slot: 29
+  hologram:
+    gui: true # Requires DecentHolograms plugin
+    material: OAK_SIGN
+    name: "&9&lHOLOGRAMME &8— &7Activer/Désactiver l'hologramme"
+    lore:
+      - ""
+      - "&7 Cliquez ici pour activer ou désactiver "
+      - "&7 l'hologramme du spawner."
+      - ""
+    slot: 32
+  auto-kill:
+    gui: true
+    material: IRON_SWORD
+    name: "&c&lAuto-éliminateur &8— &7Activer/Désactiver l'auto-éliminateur"
+    lore:
+      - ""
+      - "&7 La fonctionnalité d'auto-éliminateur "
+      - "&7 tue tous les mobs générés par "
+      - "&7 ce spawner et envoie les items "
+      - "&7 dans le stockage du spawner."
+      - ""
+      - "&7 Cliquez ici pour activer ou désactiver "
+      - "&7 l'auto-éliminateur "
+      - ""
+    slot: 28
+  friends:
+    gui: true
+    material: PLAYER_HEAD
+    name: "&a&lAMIS &8— &7Gérer les amis"
+    lore:
+      - ""
+      - "&7 Ajouter des amis à ce spawner "
+      - "&7 pour leur donner toutes les permissions "
+      - "&7 nécéssaires pour contrôler ce spawner. "
+      - ""
+      - "&8 • &7Les amis ne peuvent pas:"
+      - "&8  • &7casser le spawner."
+      - "&8  • &7ajouter d'autres amis."
+      - ""
+    slot: 33
+  level-up:
+    gui: true
+    material: head-eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzA0MGZlODM2YTZjMmZiZDJjN2E5YzhlYzZiZTUxNzRmZGRmMWFjMjBmNTVlMzY2MTU2ZmE1ZjcxMmUxMCJ9fX0=
+    name: "&5&lMONTER DE NIVEAU &8— &7Améliorer votre spawner!"
+    lore:
+      - ""
+      - "&7 Au lieu de placer les spawners côte à côte "
+      - "&7 et collecter le butin de chacun un "
+      - "&7 par un, vous pouvez stack les spawners entre eux "
+      - "&7 et quand même obtenir le même butin, et le collecter "
+      - "&7 est bien plus facile!"
+      - ""
+      - "&8 • &7Cliquez ici pour &5améliorer &7votre spawner!"
+      - ""
+    slot: 15
+  exp:
+    gui: true
+    material: EXPERIENCE_BOTTLE
+    name: "&d&lEXPERIENCE &8— &7Obtenir l'expérience"
+    lore:
+      - ""
+      - "&7 Obtenir toute l'XP stockée dans ce "
+      - "&7 spawner. "
+      - ""
+      - "&8 • &7Vous obtiendrez: "
+      - "&d {experience} XP "
+      - ""
+    slot: 30
+  settings:
+    gui: true
+    material: ANVIL
+    name: "&e&lPARAMETRES &8— &7Voir les paramètres"
+    lore:
+      - ""
+      - "&7 Voir les paramètres de ce "
+      - "&7 spawner, et les modifier comme vous "
+      - "&7 le souhaitez. "
+      - ""
+      - "&7 Vous pouvez:"
+      - " &8 • &eActiver/Désactiver le stockage virtuel "
+      - " &8 • &eActiver/Désactiver le stockage d'XP "
+      - ""
+    slot: 34
+
+settingsMenu:
+  menuRows: 3
+  menuName: "&lMenu des paramètres"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE
+    name: ""
+  virtual_storage:
+    material: CAULDRON
+    name: "&e&lTOCKAGE VIRTUEL &8— &7Activer/Désactiver"
+    lore:
+      - ""
+      - "&7 Cliquez ici pour activer ou désactiver "
+      - "&7 le stockage virtuel de ce spawner. "
+      - ""
+      - " &8 • &eStockage Virtuel: &7{virtual_storage}"
+      - ""
+    slot: 12
+  xp_storage:
+    material: EXPERIENCE_BOTTLE
+    name: "&e&lSTOCKAGE D'XP &8— &7Activer/Désactiver"
+    lore:
+      - ""
+      - "&7 Cliquez ici pour activer ou désactiver "
+      - "&7 le stockage d'XP de ce spawner. "
+      - ""
+      - " &8 • &eStockage d'XP: &7{xp_storage}"
+      - ""
+    slot: 14
+
+storageMenu:
+  menuRows: 3
+  menuName: "&lMenu du stockage"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Set to AIR if you don't want filler items.
+    name: ""
+  sellItem:
+    material: GOLD_INGOT
+    name: "&e&lVENDRE LES ITEMS &8— &7Tout vendre"
+    lore:
+      - ""
+      - "&7 Vous pouvez vendre tout ce qui est dans "
+      - "&7 le stockage de ce spawner simplement en "
+      - "&7 cliquant sur ce bouton."
+      - ""
+      - "&8 • &7Multiplicateur Actif: &ex{multiplier} "
+      - "&8 • &7Tout vendre vous donnera: "
+      - "&e ${money} "
+      - ""
+      - "&7 Cliquez &eici &7pour vendre tous  les items."
+      - ""
+    slot: 22
+  itemLores:
+    - ""
+    - "&7 Vous avez actuellement &6{amount_type}x " # {amount_type} returns the amount of an item currently stored
+    - "&7 de cet item stocké."
+    - ""
+    - " &8• &7Limit de stockage: &6{storage_limit}"
+    - " &8[{storage_bar}&8]"
+    - ""
+    - " &8• &7Clic-Gauche pour obtenir 64 "
+    - " &8• &7Clic-Droit pour remplir l'inventaire "
+    - ""
+
+friendsMenu:
+  menuName: "&lMenu des amis"
+  fillItem:
+    material: BLACK_STAINED_GLASS_PANE # Set to AIR if you don't want filler items.
+    name: ""
+  addItem:
+    material: DIAMOND
+    name: "&a&lAJOUTER AMI &8— &7Cliquez ici"
+    lore:
+      - ""
+      - "&7 Si vous voulez ajouter un ami "
+      - "&7 à votre spawner, cliquez ici. "
+      - ""
+    slot: 49
+  friends:
+    lore:
+      - ""
+      - "&7 Cliquez ici pour retirer ce "
+      - "&7 joueur de votre liste d'amis. "
+      - ""
+
+
+lang:
+  prefix: "&8[&6ancSpawners&8] "
+  tookXP: "&7Vous avez pris &d{0} XP &7du spawner."
+  noXP: "&7Ce spawner n'a aucun XP stocké."
+  tookItems: "&7Vous avez pris &6{0}x {1} &7du spawner."
+  soldItems: "&7Vous avez vendu &6{0}x &7items et obtenu &6${1} &7ajouté à votre compte. &8(&7Multiplicateur: &6x{2}&8)"
+  noItems: "&7Ce spawner n'a aucun item stocké."
+  givenSpawners: "&7Vous avez donné &6{0}x {1} &7à &6{2}&7!"
+  receivedSpawners: "&7Vous avez obtenu &6{0}x {1}&7!"
+  playerNotFound: "&7Je ne pense pas que ce joueur est en ligne."
+  reloadedConfig: "&7La configuration a été rechargée avec succès."
+  noPermission: "&7Vous n'avez pas la permission requise pour utiliser cette fonctionnalité."
+  enabledAutoKill: "&7Vous avez &aactivé &7le module d'auto-éliminateur avec succès."
+  disabledAutoKill: "&7Vous avez &cdésactivé &7le module d'auto-éliminateur avec succès."
+  addFriendMessage: "&7Ecrivez le nom de l'ami que vous souhaitez ajouter à ce spawner. Tapez &c'cancel' &7pour annuler le processus."
+  removedFriendFromSpawner: "&7Vous avez retiré un ami de ce spawner."
+  cancelledProcess: "&7Vous avez annulé le processus avec succès."
+  successfullyAddedFriend: "&7Vous avez ajouter un ami à ce spawner avec succès."
+  placedSpawner: "&7Vous avez placé un {0}&7 avec  succès!"
+  brokeSpawner: "&7Vous avez retiré un {0}&7 avec succès!"
+  brokeWithLevels: "&7Vous avez retiré un niveau de {0}&7 avec succès!"
+  brokeAllLevels: "&7Vous avez retiré tous les niveau de {0}&7 avec succès!"
+  errorWithSpawner: "&7Ce spawner ne semble pas être configuré, contactez un administrateur de ce serveur."
+  spawnerMaxLevel: "&7Ce spawner est déjà au niveau maximum et ne peut plus être amélioré."
+  offHandSpawner: "&7Vous ne pouvez pas améliorer un spawner avec votre seconde main."
+  notTheOwner: "&7Vous ne possédez pas ce spawner."
+  noAccess: "&7Vous n'avez pas accès à ce spawner."
+  levelUpSuccessful: "&7Vous avez ajouté &d{0} niveaux &7à votre spawner."
+  noSpawnersFound: "&7Je n'ai trouvé aucun spawner comme celui-ci dans votre inventaire."
+  commandUsage: "&7Utilisation correcte: &6/ancspawners <give/reload> <joueur> <spawner> <quantité>"
+  spawnerNotFound: "&7Ce spawner n'a pas pu être trouvé dans la configuration."
+  onlyOwnerTakeXP: "&7Seulement le propriétaire peut prendre l'XP de ce spawner."
+  hologram:
+    - "&8(&f{level}x&8) {spawner}"
+    - ""
+    - "&a☻ ᴘʀᴏᴘʀɪᴇᴛᴀɪʀᴇ &7➡ &f{owner}"
+    - "&6❦ ꜱᴛᴏᴄᴋᴀɢᴇ &7➡ &f{storage_bar}"
+    - ""
+    - "&7&oClic-droit pour accéder au menu."
+  enabledHologram: "&7Vous avez &aactivé &7l'hologramme du spawner."
+  disabledHologram: "&7Vous avez &cdésactivé &7l'hologramme du spawner."
+  vanillaSpawnerBroken: "&7Vous avez cassé un spawner vanilla avec succès."
+  vanillaSpawnerNotConfigured: "&7Ce spawner n'a pas été configuré jusqu'à présent, contactez un administrateur de ce serveur."
+  vanillaSpawnerEntityNotFound: "&7Le type d'entité de ce spawner n'a pas pu être trouvé, contactez l'auteur de ce plugin."
+  bypassBrokeSpawner: "&c&lADMIN BYPASS &8- &7Vous avez juste cassé le spawner &c{0}x {1}&7, appartenant à: &c{2}"
+  silkTouchRequired: "&7Délicatesse est requis pour cassé ce spawner."
+  noSilkTouchSpawnerLost: "&7Ce spawner a été perdu car vous l'avez cassé sans délicatesse."
+  sellItemsTitle: "&a{money_gained}$"
+  sellItemsSubtitle: "&fVous avez vendu le stockage de ce spawner."
+  takeXpTitle: "&6{xp_gained} XP"
+  takeXpSubtitle: "&fVous avez gagné des points d'expérience."
+  toggledVirtualStorage: "&7Vous avez activé/désactivé le stockage virtuel avec succès!"
+  toggledXpStorage: "&7Vous avez activé/désactivé le stockage d'expérience avec succès.!"
+  givenBoost: "&7Vous avez donné une amélioration &6{0} &7à &6{1}&7!"
+  receivedBoost: "&7Vous avez reçu une amélioration &6{0}&7!"
+  boostNotFound: "&7Amélioration &6{0} &7pas trouvée."
+  commandUsageGiveBoost: "&7Utilisation correcte: &6/ancspawners giveboost <joueur> <amélioration>"
+  commandUsageGive: "&7Utilisation correcte: &6/ancspawners give <joeueur> <spawner> [quantité]"
+  chance: "&7Vous n'avez pas eu la chance d'obtenir ce spawner."
+  chanceByCount: "&7Vous avez perdu &6{0} &7spawners dans ce processus."
+  boost_spawn_amount: "&7Quantité au Spawn &8(&2+{0}&8) &8[&f{1}&8]"
+  boost_spawn_time: "&7Temps de Spawn &8(&e{0}x&8) &8[&f{1}&8]"
+  boost_applied: "&7Vous avez appliqué l'amélioration: {0} &7à ce spawner avec succès!"
+  spawner_not_managed: "&7Ce spawner n'est pas géré par ancSpawners."
+  no_active_boosts: "&7Aucune amélioration active"
+  boost_already_active: "&7Une amélioration avec le même type est déjà active."

@@ -41,7 +41,7 @@ public class ancStorage {
                 Main.getPlugin().getSpawnerManager().getLocation(location)
         });
 
-        Main.getPlugin().executeDatabaseQuery(loadStorageTask, resultSet -> {
+        Main.getPlugin().getSqlProcessing().executeDatabaseQuery(loadStorageTask, resultSet -> {
             try {
                 while (resultSet.next()) {
                     String itemData = resultSet.getString("item");
@@ -69,7 +69,7 @@ public class ancStorage {
                 Main.getPlugin().getSpawnerManager().getLocation(location)
         });
 
-        Main.getPlugin().executeDatabaseQuery(loadXpTask, resultSet -> {
+        Main.getPlugin().getSqlProcessing().executeDatabaseQuery(loadXpTask, resultSet -> {
             try {
                 if (resultSet.next()) {
                     stored_xp = resultSet.getInt("xp");

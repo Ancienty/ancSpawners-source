@@ -6,6 +6,7 @@ import com.ancienty.ancspawnersrecoded.Support.Editors.CustomGetters.CustomGette
 import com.ancienty.ancspawnersrecoded.Support.Editors.CustomGetters.DefaultGetter;
 import com.ancienty.ancspawnersrecoded.Support.Editors.CustomGetters.ItemsAdderGetter;
 import com.ancienty.ancspawnersrecoded.Support.Editors.HologramEditor;
+import com.ancienty.ancspawnersrecoded.Support.Other.WildLoadersSupport;
 import com.ancienty.ancspawnersrecoded.Utils.ItemStackUtils;
 import com.cryptomorin.xseries.XMaterial;
 import com.google.gson.Gson;
@@ -31,7 +32,8 @@ public class SpawnerManager {
     private final Map<ancSpawner, Long> last_spawn_times = new ConcurrentHashMap<>();
     public final Map<String, Integer> config_to_delay_cache = new ConcurrentHashMap<>();
     public final Map<String, ItemStack> itemStackCache = new HashMap<>();
-    private final Map<String, String> entityTypeCache = new ConcurrentHashMap<>();;
+    private final Map<String, String> entityTypeCache = new ConcurrentHashMap<>();
+    private final Map<String, Double> rangeCache = new ConcurrentHashMap<>();
 
     public Wolf tamedWolf;
     public final Map<UUID, ancSpawner> entityLink = new ConcurrentHashMap<>();
@@ -59,7 +61,7 @@ public class SpawnerManager {
         String query = "SELECT * FROM spawners";
         DatabaseTask loadSpawnersTask = new DatabaseTask(query, new Object[]{});
 
-        Main.getPlugin().executeDatabaseQuery(loadSpawnersTask, resultSet -> {
+        Main.getPlugin().getSqlProcessing().executeDatabaseQuery(loadSpawnersTask, resultSet -> {
             try {
                 while (resultSet.next()) {
                     try {
@@ -93,8 +95,8 @@ public class SpawnerManager {
                 e.printStackTrace();
             } finally {
                 // After loading is complete, print the messages
-                Bukkit.getLogger().info(loadedSpawners.get() + " spawners have been loaded successfully.");
-                Bukkit.getLogger().info(skippedSpawners.get() + " spawners skipped due to errors, errors can be found in the logs folder of the plugin.");
+                Main.getPlugin().getLogger().info(loadedSpawners.get() + " spawners have been loaded successfully.");
+                Main.getPlugin().getLogger().info(skippedSpawners.get() + " spawners skipped due to errors, errors can be found in the logs folder of the plugin.");
 
                 // Run spawners
                 runSpawners();
@@ -277,9 +279,25 @@ public class SpawnerManager {
         }
     }
 
+    public Double getRangeForSpawner(ancSpawner spawner) {
+        String config_name = spawner.getConfigName();
+        if (!rangeCache.isEmpty() && rangeCache.containsKey(config_name)) {
+            return rangeCache.get(config_name);
+        } else {
+            if (config_name == null || config_name.equalsIgnoreCase("default")) {
+                rangeCache.put("default", Main.getPlugin().getConfig().getDouble("spawners.default.spawnerInfo.range"));
+            } else {
+                rangeCache.put("default", Main.getPlugin().getConfig().getDouble("spawners." + config_name + ".spawnerInfo.range"));
+            }
+            return getRangeForSpawner(spawner);
+        }
+    }
+
     public boolean checkSpawnConditions(ancSpawner ancSpawner) {
         Location location = ancSpawner.getLocation();
-        double range = 16;
+        double range = getRangeForSpawner(ancSpawner);
+
+        if (WildLoadersSupport.chunkHasActiveWildLoader(ancSpawner.getLocation().getChunk())) return true;
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.getWorld().equals(location.getWorld())) {
@@ -375,14 +393,14 @@ public class SpawnerManager {
                     spawner.isVirtualStorageEnabled(),
                     spawner.isXPStorageEnabled()
             });
-            Main.getPlugin().addDatabaseTask(spawnerTask);
+            Main.getPlugin().getSqlProcessing().addDatabaseTask(spawnerTask);
 
             // Delete and save friends
             DatabaseTask deleteFriendsTask = new DatabaseTask(deleteFriendsQuery, new Object[]{
                     spawner.getWorld().getName(),
                     getLocation(spawner)
             });
-            Main.getPlugin().addDatabaseTask(deleteFriendsTask);
+            Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteFriendsTask);
 
             for (String uuid : spawner.getFriendUuids()) {
                 DatabaseTask friendTask = new DatabaseTask(friendQuery, new Object[]{
@@ -390,7 +408,7 @@ public class SpawnerManager {
                         getLocation(spawner),
                         uuid
                 });
-                Main.getPlugin().addDatabaseTask(friendTask);
+                Main.getPlugin().getSqlProcessing().addDatabaseTask(friendTask);
             }
 
             // Delete old storage data before inserting new data
@@ -398,7 +416,7 @@ public class SpawnerManager {
                     spawner.getWorld().getName(),
                     getLocation(spawner)
             });
-            Main.getPlugin().addDatabaseTask(deleteStorageTask);
+            Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteStorageTask);
 
             // Insert new storage items into the storage table
             for (Map.Entry<ItemStack, Integer> entry : spawner.getStorage().getStorage().entrySet()) {
@@ -418,7 +436,7 @@ public class SpawnerManager {
                         itemData,
                         amount
                 });
-                Main.getPlugin().addDatabaseTask(storageTask);
+                Main.getPlugin().getSqlProcessing().addDatabaseTask(storageTask);
             }
 
             // Save XP storage in the storage_xp table
@@ -427,7 +445,7 @@ public class SpawnerManager {
                     getLocation(spawner),
                     spawner.getStorage().getStoredXp()
             });
-            Main.getPlugin().addDatabaseTask(storageXpTask);
+            Main.getPlugin().getSqlProcessing().addDatabaseTask(storageXpTask);
         }
         updated_spawners_list.removeAll(spawners_done);
         // Log the completion of the auto-save process
@@ -497,9 +515,9 @@ public class SpawnerManager {
                 getLocation(location)
         });
 
-        Main.getPlugin().addDatabaseTask(deleteSpawnerTask);
-        Main.getPlugin().addDatabaseTask(deleteStorageTask);
-        Main.getPlugin().addDatabaseTask(deleteStorageXpTask);
-        Main.getPlugin().addDatabaseTask(deleteFriendsTask);
+        Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteSpawnerTask);
+        Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteStorageTask);
+        Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteStorageXpTask);
+        Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteFriendsTask);
     }
 }

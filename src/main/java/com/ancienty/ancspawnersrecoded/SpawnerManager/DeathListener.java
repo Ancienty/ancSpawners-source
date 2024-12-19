@@ -12,6 +12,8 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.SlimeSplitEvent;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable; // ADDED
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
 
@@ -65,6 +67,17 @@ public class DeathListener implements Listener {
 
             int finalXp_drop = xp_drop;
             List<ItemStack> finalItem_drops = item_drops;
+
+            // ADDED: Normalize item durability before storing
+            for (ItemStack item : finalItem_drops) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta instanceof Damageable) {
+                    Damageable dmg = (Damageable) meta;
+                    dmg.setDamage(0); // Set damage to 0 to represent full durability
+                    item.setItemMeta(meta);
+                }
+            }
+
             Bukkit.getScheduler().runTaskAsynchronously(Main.getPlugin(), () -> {
                 if (spawner.isVirtualStorageEnabled()) {
                     if (!finalItem_drops.isEmpty()) {

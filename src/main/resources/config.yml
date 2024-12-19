@@ -1,49 +1,80 @@
 config:
   version: ${project.version}
-  lang: en # Only 'en' (English), 'tr' (Turkish) and 'pl' (Polish) are supported right now.
+  # Language code for messages and GUI texts.
+  # Supported languages: 'en' (English), 'tr' (Turkish), 'pl' (Polish), 'de' (German), 'fr' (French)
+  lang: en
 
 database:
-  # Do not change.
+  # Database type used for storing plugin data.
+  # Currently, do not change this from SQLITE.
   type: SQLITE
 
 spawners:
-  # Default spawner is for all mob spawners, you don't need to add every spawner
-  # one by one, default applies for all.
-  # --
-  # If you wish to create a mob spawner with different ranges and/or delays
-  # copy and paste this, change entity names and "default" to whatever you want.
+  # This section defines the configuration for different types of spawners.
+  # "default" applies to all spawners and acts as a fallback.
+  # Any mob/entity that does not have its own entry will use these values.
+  #
+  # To create a unique configuration for a specific spawner type:
+  # 1. Copy the entire "default" section.
+  # 2. Paste it below and rename "default" to your new spawner name (e.g. "zombie" or "iron").
+  # 3. Adjust "material" and other values to match the mob/item you want.
+
   default:
+    # The name format of the spawner when viewed in-game.
+    # {entity_name} is replaced by the entity’s name.
     name: "&c&l{entity_name} &8-- &7Spawner"
     lore:
       - ""
-      - "&7 When placed, starts spawning "
-      - "&7 {entity_name} every now and then. "
+      - "&7When placed, this spawner will"
+      - "&7gradually spawn {entity_name}."
       - ""
     spawnerInfo:
+      # mode: ENTITY - The spawner will spawn living creatures (e.g. zombies, cows).
+      # mode: ITEM   - The spawner will spawn items (e.g. diamonds, bones).
       mode: ENTITY
+
+      # material: For ENTITY mode, this should match the entity type you want to spawn
+      # (e.g. ZOMBIE, CREEPER, COW).
+      # For ITEM mode, it should be the item type (e.g. DIAMOND, BONE).
+      # Please leave it as "{entity_name}" for the default spawner.
       material: {entity_name}
+
+      # range: The radius (in blocks) around the spawner within which a player must be present
+      # in order for the spawner to attempt spawning.
       range: 16
+
+      # delay: The time (in seconds) between spawn attempts.
+      # After this delay, the spawner will try to spawn again if at least one player
+      # is within the defined range.
       delay: 8
+
+      # sell_button: If true, players can sell items from spawners directly via GUI.
       sell_button: true
 
-  # This is an example Diamond spawner, copy and paste this to create
-  # your own item spawners.
+  # Example of a custom item spawner configuration.
+  # This spawner will periodically spawn diamonds.
   diamond:
     name: "&b&lDIAMOND &8-- &7Spawner"
     lore:
       - ""
-      - "&7 When placed, starts spawning "
-      - "&7 diamonds every now and then."
+      - "&7When placed, this spawner will"
+      - "&7gradually spawn diamonds."
       - ""
     spawnerInfo:
+      # For this spawner, we choose ITEM mode since it should spawn diamonds (an item).
       mode: ITEM
       material: DIAMOND
+      # Players must be within this distance for spawning to occur.
       range: 16
+      # Attempts to spawn every 8 seconds if conditions are met.
       delay: 8
       sell_button: true
-      # NOTE: Details are only applicable to mode: ITEM spawners.
-      # and the storage function must be turned off to actually see the result.
-      # to turn off storage, go into your lang file, find storage, and set gui to false.
+
+      # details: This section only applies to ITEM mode spawners.
+      # It defines how the spawned item will appear (name, lore).
+      # Note: To see the actual spawned items dropping around the spawner (instead of stored virtually),
+      #       you need to go into modules/settings.yml, set "default:" under virtual-storage to "false"
+      #       and set "force:" to true, this will force all spawners to disable their virtual storage module.
       details:
         name: "&bA cool diamond!"
         lore:
@@ -52,10 +83,16 @@ spawners:
           - ""
 
 itemPrices:
-  # Price provider is where the plugin gets prices of materials
-  # from, this currently only supports 'CUSTOM', 'SHOPGUIPLUS'.
+  # priceProvider determines where the plugin fetches item prices from.
+  # Supported providers:
+  #   - CUSTOM: Uses the prices defined below.
+  #   - SHOPGUIPLUS: Fetches prices from the ShopGUIPlus plugin.
   priceProvider: CUSTOM
-  # These work only if the price provider is 'CUSTOM'.
+
+  # Below prices are only used if the priceProvider is CUSTOM.
+  # The format is:
+  # ITEM_NAME: price
+  # Note: ITEM_NAME must be a valid Bukkit/Spigot material.
   ROTTEN_FLESH: 0.4
   BONE: 0.2
   STRING: 1.2

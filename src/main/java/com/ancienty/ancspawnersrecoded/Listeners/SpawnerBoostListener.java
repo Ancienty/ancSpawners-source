@@ -63,7 +63,7 @@ public class SpawnerBoostListener implements Listener {
                 });
 
                 // Add the task to the operations queue
-                Main.getPlugin().addDatabaseTask(insertBoostTask);
+                Main.getPlugin().getSqlProcessing().addDatabaseTask(insertBoostTask);
 
                 // Remove one boost item from the player's hand
                 itemInHand.setAmount(itemInHand.getAmount() - 1);

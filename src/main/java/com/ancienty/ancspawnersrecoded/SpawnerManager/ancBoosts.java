@@ -35,7 +35,7 @@ public class ancBoosts {
                 Main.getPlugin().getSpawnerManager().getLocation(location),
         });
 
-        Main.getPlugin().executeDatabaseQuery(selectBoostsTask, resultSet -> {
+        Main.getPlugin().getSqlProcessing().executeDatabaseQuery(selectBoostsTask, resultSet -> {
             List<String> expiredBoostTypes = new ArrayList<>();
             try {
                 while (resultSet.next()) {
@@ -70,7 +70,7 @@ public class ancBoosts {
                 Main.getPlugin().getSpawnerManager().getLocation(location),
                 boostType
         });
-        Main.getPlugin().addDatabaseTask(deleteBoostTask);
+        Main.getPlugin().getSqlProcessing().addDatabaseTask(deleteBoostTask);
     }
 
     /**

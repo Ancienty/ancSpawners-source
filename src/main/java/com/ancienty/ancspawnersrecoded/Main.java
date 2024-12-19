@@ -2,6 +2,7 @@ package com.ancienty.ancspawnersrecoded;
 
 import com.ancienty.ancspawnersrecoded.Commands.SpawnerCommand;
 import com.ancienty.ancspawnersrecoded.Database.DatabaseTask;
+import com.ancienty.ancspawnersrecoded.Database.SQLProcessing;
 import com.ancienty.ancspawnersrecoded.Database.SQLite;
 import com.ancienty.ancspawnersrecoded.GUIs.Listeners.SpawnerClickListener;
 import com.ancienty.ancspawnersrecoded.GUIs.Listeners.SpawnerGUIListener;
@@ -18,6 +19,8 @@ import com.ancienty.ancspawnersrecoded.Utils.*;
 import com.cryptomorin.xseries.XEntity;
 import com.cryptomorin.xseries.XEntityType;
 import com.cryptomorin.xseries.XMaterial;
+import com.cryptomorin.xseries.profiles.builder.XSkull;
+import com.cryptomorin.xseries.profiles.objects.Profileable;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
@@ -60,8 +63,6 @@ public final class Main extends JavaPlugin {
     private static SQLite sqLite;
     private static HologramEditor hologramEditor;
     private SpawnerManager spawnerManager;
-    private final ConcurrentLinkedQueue<DatabaseTask> operations_queue = new ConcurrentLinkedQueue<>();
-    private final AtomicBoolean isProcessing = new AtomicBoolean(false);
 
     public YamlConfiguration modules_autokill;
     public YamlConfiguration modules_friends;
@@ -74,6 +75,7 @@ public final class Main extends JavaPlugin {
 
     private static Economy econ = null;
     private static Permission perms = null;
+    private static SQLProcessing sqlProcessing;
 
     private ancLogger ancLogger;
     public YamlConfiguration lang;
@@ -104,6 +106,7 @@ public final class Main extends JavaPlugin {
 
         getLogger().info("Reading database & setting up spawnerManager.");
 
+        sqlProcessing = new SQLProcessing();
         sqLite = new SQLite();
         spawnerManager = new SpawnerManager();
 
@@ -160,117 +163,18 @@ public final class Main extends JavaPlugin {
         if (!license_invalid) {
             getLogger().warning("Shutdown detected, initializing force-save.");
             getSpawnerManager().saveNow(getLogger());
-            processQueueSynchronously();
+            sqlProcessing.processQueueSynchronously();
         }
+        Bukkit.getScheduler().cancelTasks(this);
+    }
+
+    public SQLProcessing getSqlProcessing() {
+        return sqlProcessing;
     }
 
     public ancLogger getAncLogger() {
         return ancLogger;
     }
-
-    public void addDatabaseTask(DatabaseTask task) {
-        if (!isEnabled()) {
-            // Process the task immediately since we cannot schedule new tasks
-            processDatabaseTask(task);
-        } else {
-            operations_queue.add(task);
-            // If processing is not running, start it
-            if (isProcessing.compareAndSet(false, true)) {
-                Bukkit.getScheduler().runTaskAsynchronously(this, this::processQueue);
-            }
-        }
-    }
-
-
-    private void processQueueSynchronously() {
-        isProcessing.set(true);
-        DatabaseTask task;
-        while ((task = operations_queue.poll()) != null) {
-            processDatabaseTask(task);
-        }
-        isProcessing.set(false);
-    }
-
-    private void processDatabaseTask(DatabaseTask task) {
-        try (Connection connection = SQLite.dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(task.getQuery())) {
-
-            Object[] parameters = task.getParameters();
-            for (int i = 0; i < parameters.length; i++) {
-                statement.setObject(i + 1, parameters[i]);
-            }
-            statement.executeUpdate();
-        } catch (SQLException ex) {
-            String errorMessage = "Failed to execute database task (Query: " + task.getQuery() + "): " + ex.getMessage();
-            getLogger().severe(errorMessage);
-            // Log the error using ancLogger
-            getAncLogger().writeError(errorMessage);
-        }
-    }
-
-    private void processQueue() {
-        DatabaseTask task;
-        while ((task = operations_queue.poll()) != null) {
-            try (Connection connection = SQLite.dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(task.getQuery())) {
-
-                Object[] parameters = task.getParameters();
-                for (int i = 0; i < parameters.length; i++) {
-                    statement.setObject(i + 1, parameters[i]);
-                }
-                statement.executeUpdate();
-            } catch (SQLException ex) {
-                String errorMessage = "Failed to execute database task (Query: " + task.getQuery() + "): " + ex.getMessage();
-                Bukkit.getLogger().severe(errorMessage);
-                // Log the error using ancLogger
-                getAncLogger().writeError(errorMessage);
-            }
-        }
-        // Set processing flag to false
-        isProcessing.set(false);
-        // Double-check if new tasks were added after we finished
-        if (!operations_queue.isEmpty()) {
-            if (isProcessing.compareAndSet(false, true)) {
-                processQueue();
-            }
-        }
-    }
-
-
-    // New method to execute database queries and process ResultSet with a callback
-    public void executeDatabaseQuery(DatabaseTask task, Consumer<ResultSet> callback) {
-        if (!isEnabled()) {
-            // Handle the situation appropriately, perhaps log a warning or process synchronously if possible
-            String warningMessage = "Cannot execute database query; plugin is disabled.";
-            getLogger().warning(warningMessage);
-            // Log the warning using ancLogger
-            getAncLogger().writeError(warningMessage);
-            return;
-        }
-
-        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            try (Connection connection = SQLite.dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(task.getQuery())) {
-
-                Object[] parameters = task.getParameters();
-                for (int i = 0; i < parameters.length; i++) {
-                    statement.setObject(i + 1, parameters[i]);
-                }
-
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    // Pass the ResultSet to the callback for processing
-                    callback.accept(resultSet);
-                }
-
-            } catch (SQLException ex) {
-                String errorMessage = "Failed to execute database query (Query: " + task.getQuery() + "): " + ex.getMessage();
-                getLogger().severe(errorMessage);
-                // Log the error using ancLogger
-                getAncLogger().writeError(errorMessage);
-            }
-        });
-    }
-
 
     public static Main getPlugin() {
         return plugin;
@@ -495,10 +399,6 @@ public final class Main extends JavaPlugin {
         spawner.setStorageLimit(new_limit);
     }
 
-    public ConcurrentLinkedQueue<DatabaseTask> getOperationsQueue() {
-        return operations_queue;
-    }
-
     /**
      * @return Returns a HashMap<String, String>
      *     where first String is SpawnerType, SpawnerMode
@@ -659,6 +559,14 @@ public final class Main extends JavaPlugin {
         if (!langPL.exists()) {
             plugin.saveResource("lang/lang_pl.yml", true);
         }
+        File langDE = new File(getDataFolder(), "/lang/lang_de.yml");
+        if (!langDE.exists()) {
+            plugin.saveResource("lang/lang_de.yml", true);
+        }
+        File langFR = new File(getDataFolder(), "/lang/lang_fr.yml");
+        if (!langFR.exists()) {
+            plugin.saveResource("lang/lang_fr.yml", true);
+        }
 
         String configLang = getConfig().getString("config.lang");
         if (configLang != null) {
@@ -668,6 +576,10 @@ public final class Main extends JavaPlugin {
                 lang = YamlConfiguration.loadConfiguration(langEN);
             } else if (configLang.equalsIgnoreCase("pl")) {
                 lang = YamlConfiguration.loadConfiguration(langPL);
+            } else if (configLang.equalsIgnoreCase("de")) {
+                lang = YamlConfiguration.loadConfiguration(langDE);
+            } else if (configLang.equalsIgnoreCase("fr")) {
+                lang = YamlConfiguration.loadConfiguration(langFR);
             }
         }
 
@@ -866,36 +778,6 @@ public final class Main extends JavaPlugin {
     }
 
     public static ItemStack getHead(String value) {
-        if (MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_21_R1)) return new ItemStack(XMaterial.PLAYER_HEAD.parseMaterial());
-        GameProfile profile = new GameProfile(UUID.randomUUID(), "Ancienty");
-        PropertyMap propertyMap = profile.getProperties();
-        if (propertyMap == null) {
-            throw new IllegalStateException("Profile doesn't contain a property map");
-        }
-        propertyMap.put("textures", new Property("textures", value));
-        ItemStack head = new ItemStack(XMaterial.PLAYER_HEAD.parseMaterial());
-        ItemMeta headMeta = head.getItemMeta();
-        Class<?> headMetaClass = headMeta.getClass();
-        try {
-            getField(headMetaClass, "profile", GameProfile.class, 0).set(headMeta, profile);
-        } catch (IllegalArgumentException | IllegalAccessException e) {
-            e.printStackTrace();
-        }
-        head.setItemMeta(headMeta);
-        return head;
-    }
-
-    private static <T> Field getField(Class<?> target, String name, Class<T> fieldType, int index) {
-        for (final Field field : target.getDeclaredFields()) {
-            if ((name == null || field.getName().equals(name)) && fieldType.isAssignableFrom(field.getType()) && index-- <= 0) {
-                field.setAccessible(true);
-                return field;
-            }
-        }
-
-        // Search in parent classes
-        if (target.getSuperclass() != null)
-            return getField(target.getSuperclass(), name, fieldType, index);
-        throw new IllegalArgumentException("Cannot find field with type " + fieldType);
+        return XSkull.createItem().profile(Profileable.detect(value)).apply();
     }
 }

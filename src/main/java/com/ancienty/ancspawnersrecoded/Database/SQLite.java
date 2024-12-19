@@ -22,8 +22,8 @@ public class SQLite {
             config.setJdbcUrl("jdbc:sqlite:" + Main.getPlugin().getDataFolder() + File.separator + "database.db");
 
             // Connection Pool Settings
-            config.setMaximumPoolSize(15);
-            config.setMinimumIdle(4);
+            config.setMaximumPoolSize(30);
+            config.setMinimumIdle(7);
             config.setIdleTimeout(300000);
             config.setConnectionTimeout(20000);
             config.setMaxLifetime(1800000);
@@ -45,7 +45,6 @@ public class SQLite {
     public SQLite() {
         initializeHikariCP();
         try (Connection connection = dataSource.getConnection()) {
-            connection.prepareStatement("PRAGMA journal_mode=WAL").execute();
             // Check if the database uses the old structure
             if (isOldDatabaseStructure(connection)) {
                 Bukkit.getLogger().log(Level.INFO, "[ancSpawners] Old database structure detected. Starting data conversion...");

@@ -6,7 +6,7 @@
 
   <groupId>com.ancienty</groupId>
   <artifactId>ancSpawners-recoded</artifactId>
-  <version>3.0.5-licensed</version>
+  <version>3.0.7-licensed</version>
   <packaging>jar</packaging>
 
   <name>ancSpawners</name>
@@ -90,11 +90,16 @@
         </dependency>
         <dependency>
             <groupId>com.bgsoftware</groupId>
+            <artifactId>WildLoadersAPI</artifactId>
+            <version>2024.4</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.bgsoftware</groupId>
             <artifactId>SuperiorSkyblockAPI</artifactId>
             <version>2023.3</version>
             <scope>provided</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.json/json -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
