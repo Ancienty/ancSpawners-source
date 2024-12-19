@@ -279,17 +279,23 @@ public class SpawnerManager {
     }
 
     public Double getRangeForSpawner(ancSpawner spawner) {
-        String config_name = spawner.getConfigName();
-        if (!rangeCache.isEmpty() && rangeCache.containsKey(config_name)) {
-            return rangeCache.get(config_name);
-        } else {
-            if (config_name == null || config_name.equalsIgnoreCase("default")) {
-                rangeCache.put("default", Main.getPlugin().getConfig().getDouble("spawners.default.spawnerInfo.range"));
-            } else {
-                rangeCache.put("default", Main.getPlugin().getConfig().getDouble("spawners." + config_name + ".spawnerInfo.range"));
-            }
-            return getRangeForSpawner(spawner);
+        String configName = spawner.getConfigName();
+        if (configName == null || configName.equalsIgnoreCase("default")) {
+            configName = "default";
         }
+
+        if (rangeCache.containsKey(configName)) {
+            return rangeCache.get(configName);
+        }
+
+        String path = configName.equals("default")
+                ? "spawners.default.spawnerInfo.range"
+                : "spawners." + configName + ".spawnerInfo.range";
+
+        double range = Main.getPlugin().getConfig().getDouble(path);
+        rangeCache.put(configName, range);
+
+        return range;
     }
 
     public boolean checkSpawnConditions(ancSpawner ancSpawner) {
