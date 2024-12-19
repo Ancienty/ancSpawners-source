@@ -1,58 +1,56 @@
 break-spawners:
-  # Players who have this permission will be able to break
-  # spawners even if the spawner was not placed by them.
+  # Permission granting the ability to break any spawner,
+  # regardless of who placed it.
   permission: ancspawners.breakallspawners
 
 spawner-drop-chance:
-  # Would you like to change spawner drop chances?
-  # For example, if you set this to 50, players will have a 50% chance
-  # of getting the spawner when breaking it, and 50% chance that it will
-  # just get deleted.
-  # Default means, if a player has none of the permissions below.
+  # Adjusts the probability that a broken spawner will drop as an item.
+  # The "default" value applies if the player has no special permissions.
+  # Example: If default is set to 50, there’s a 50% chance the spawner drops,
+  # and a 50% chance it disappears when broken.
   default: 100
-  # Add custom permissions for custom drop chances, using this format:
-  # 'permission': chance
-  # IMPORTANT: Do NOT use dot (.) in permissions.
-  # IMPORTANT: Keep these in ascending order, or it might not work well for
-  # players who have more than one of these permissions.
+
+  # Add specific permissions below for custom drop chances.
+  # Format: 'permission': chance
+  # Keep these chances in ascending order. If a player has multiple permissions,
+  # the highest applicable chance will be used.
   permissions:
     ancspawners-drop1: 100
     ancspawners-drop2: 100
 
 spawner-level-limit:
-  # This determines the maximum level a spawner could be
-  # levelled up to. Default is 256
+  # Sets the maximum upgrade level a spawner can reach.
+  # Default: 256
   level-limit: 256
 
 vanilla-spawner-support:
-  # This module basically adds support for vanilla spawners.
-  # For examaple, if a player tries to break a vanilla spawner
-  # The plugin will try to match the entity type of that spawner
-  # With the spawners set below, if a match is found, the player
-  # will then get the actual ancSpawners spawner.
+  # When enabled, breaking a vanilla spawner tries to match its entity type
+  # with the plugin’s known spawners. If a match is found, the player gets an
+  # ancSpawners version of that spawner upon breaking.
   enabled: true
 
 auto-pickup:
-  # This module allows dropped spawners to go right into
-  # the player's inventory, can also be used with permission.
+  # If enabled, dropped spawners will go directly into the player’s inventory.
+  # Requires the specified permission if set.
   # Default: false
   enabled: false
   permission: ancspawners.autopickup
 
 silk-touch:
-  # Set this to true to require silk touch for players
+  # If enabled, players must use a silk touch tool to obtain a spawner drop.
   enabled: false
-  # Players who have the exempt permission will be able to get the spawner even if
-  # they don't have silktouch.
+
+  # Players with this permission can bypass the silk touch requirement.
   exempt: ancspawners.nosilktouch
-  # If silk touch is enabled and block is set to true:
-  # The spawner will not be broken
-  # If silk touch is enabled and block is set to false:
-  # The spawner will be broken AND LOST (will not be dropped).
+  
+  # If silk touch is enabled and "block" is true:
+  #   The spawner cannot be broken without silk touch.
+  # If silk touch is enabled and "block" is false:
+  #   The spawner breaks without silk touch, but is lost (no drop).
   block: true
 
 title-messages:
-  # This module, when enabled, sends titles and subtitles to players
-  # when they sell items or take xp from a spawner.
+  # If enabled, sends title/subtitle messages to players when they sell items
+  # or retrieve XP from a spawner.
   money-title: true
   xp-title: true

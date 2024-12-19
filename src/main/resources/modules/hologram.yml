@@ -1,5 +1,6 @@
 hologram:
-  # This module requires DecentHolograms plugin, if you don't have this plugin
-  # please disable the module, or it will cause problems.
+  # Requires the DecentHolograms plugin. If not installed, disable this to avoid issues.
   enabled: true
+
+  # Vertical offset for the hologram above the spawner.
   hologram-height: 2.85

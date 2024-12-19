@@ -1,20 +1,20 @@
-# This is an example loottable,
-# A loottable is like a possible drops list for mobs, and below you can
-# add and modify every item you might want zombies to drop.
-# Because this is an example loottable, it will not change anything.
-# To create your own loottables, just create a file named 'name_of_the_mob.yml'
-# and edit accordingly:
+# This file defines a loottable for a specific mob (in this case, an example for zombies).
+# Loottables determine what items and XP the mob can drop when killed by auto-kill.
+# To create your own, simply make a file named after the mob’s type (e.g., "zombie.yml")
+# and edit the drops below.
 
 drops:
-  # Item drop lists, edit to your liking.
-  # format:
-  # 'item:chance:range'
-  # Range means the range of the amount of items that
-  # could be dropped.
+  # Item drop configuration:
+  # Format: 'ITEM:CHANCE:POSSIBLE_AMOUNT_RANGE'
+  # - ITEM: The material ID of the dropped item.
+  # - CHANCE: The percentage (0-100) that this item will drop.
+  # - RANGE: The range of possible dropped item quantities (e.g., "1-3" means between 1 and 3 items).
   itemDrops:
     - ROTTEN_FLESH:70:1-3
     - GOLD_INGOT:10:1-1
 
-  # XP drops for zombies, can only be used as range.
+  # XP drops configuration:
+  # xpDrops: The range of XP that can be dropped.
+  # xpDropChance: The percentage (0-100) chance of actually dropping XP.
   xpDrops: 1-15
   xpDropChance: 100

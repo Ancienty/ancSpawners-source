@@ -1,20 +1,21 @@
 auto-kill:
-  # Auto-kill is a togglable feature, you can enable/disable it through
-  # the main menu of the spawners. Auto-kill is basically when a spawner
-  # spawns a mob, the mob dies instantly and it's drops are added to the
-  # spawner's storage, for a player to be able to enable this feature they
-  # need the permission written below.
-  # ** ONLY THE SPAWNER'S OWNER CAN TOGGLE THIS FEATURE.
-  # ** !!! TO BE ABLE TO USE AUTO-KILL ON A SPAWNER, YOU *MUST* HAVE A
-  # VALID LOOTTABLE FILE CREATED FOR THAT MOB! !!!
+  # The auto-kill feature lets the spawner automatically kill newly spawned mobs
+  # and store their drops internally. This removes the need for players to manually
+  # kill these mobs. Players can toggle this feature on or off from the spawner’s
+  # main menu, but only if they have the required permission (see below).
+  # IMPORTANT: Only the spawner’s owner can toggle this feature.
   enabled: true
-  # Forcing auto-kill means that all spawners will have auto-kill enabled and
-  # players will not be able to turn auto-kill off. Forcing auto-kill does NOT check
-  # for permissions, so auto-kill will be enabled for everyone.
+
+  # When forced, auto-kill will be active on all spawners at all times, without the
+  # option for players to turn it off. This setting bypasses any permission checks,
+  # making auto-kill universally enabled.
   # Default: false
   force: false
-  # Only force custom loottables on entities that were killed by the
-  # autokill module, the entities that were killed by players won't drop
-  # the items specified in the custom loottable if this is true.
+
+  # If enabled, custom loottables will only apply to mobs killed by the auto-kill
+  # feature. Any mobs that are killed by players instead of auto-kill will use their
+  # normal drops, ignoring custom loottables.
   loottable-only-autokill: true
+
+  # Players need this permission to toggle the auto-kill feature on their spawners.
   permission: ancspawners.autokill

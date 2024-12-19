@@ -1,29 +1,52 @@
 boosts:
+  # Enables or disables all defined spawner boosts.
   enabled: true
+
+  # Contains all defined boosts.
   list:
     boost1:
+      # Item material representing this boost.
       material: "DIAMOND"
+
+      # Determines which aspect of spawning is affected: SPAWN_AMOUNT increases the number of mobs per spawn.
       type: "SPAWN_AMOUNT"
+
+      # The value by which the spawn amount is increased.
       amount: 2
+
+      # Duration for which the boost lasts (e.g., "1d" = one day).
       duration: "1d"
+
+      # Display name for the boost item (supports color codes).
       name: "&e&lBOOST &8- &f1 days"
+
+      # Item description shown in the interface.
       lore:
         - ""
-        - "&7 Applying this boost to "
-        - "&7 your spawner will make your "
-        - "&7 spawner spawn &a+2 mobs "
-        - "&7 on each spawn. "
+        - "&7 Applying this boost will increase"
+        - "&7 the spawner’s mob output by &a+2"
+        - "&7 per spawn cycle."
         - ""
+
     boost2:
+      # Item material representing this boost.
       material: "EMERALD"
+
+      # SPAWN_TIME means it reduces the delay between spawns, increasing overall speed.
       type: "SPAWN_TIME"
+
+      # The factor by which spawning speed is increased.
       amount: 4
+
+      # Duration for which the boost lasts (e.g., "12h" = twelve hours).
       duration: "12h"
+
+      # Display name for the boost item.
       name: "&a&lBOOST &8- &f12 hours"
+
+      # Brief description explaining the effect of this boost.
       lore:
         - ""
-        - "&7 Applying this boost to "
-        - "&7 your spawner will make your "
-        - "&7 spawner spawn &a4x faster "
-        - "&7 Use it wisely. "
+        - "&7 Applying this boost will make"
+        - "&7 your spawner spawn mobs &a4x faster."
         - ""

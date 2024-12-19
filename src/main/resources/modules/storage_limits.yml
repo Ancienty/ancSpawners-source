@@ -1,14 +1,17 @@
 storage-limit:
-  # This module will allow you to set storage limits for your players
-  # based on permissions, some examples are given below:
-  #
-  # ** NOTE: Keep these values in ascending order, or it might not work as intended
-  # for players who have more than one of these permissions.
+  # Enables permission-based storage limits for players.
+  # Keep values in ascending order to ensure proper behavior when players have multiple permissions.
   enabled: true
+
+  # Default storage limit for players without special permissions.
   default: 2000
-  xpLimit: 10000 # This does NOT change based on permissions.
+
+  # XP storage limit is fixed and does not change with permissions.
+  xpLimit: 10000
+
   permissions:
-    # Format: 'permission': 'storage'
-    ancspawners-storage1: 5000 # Meaning: maximum 5000 can be stored per item.
+    # Specify permissions and their corresponding storage limits.
+    # Format: 'permission': storage_limit
+    ancspawners-storage1: 5000  # Allows up to 5000 items stored per-item.
     ancspawners-storage2: 10000
     ancspawners-storage3: 20000

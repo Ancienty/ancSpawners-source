@@ -1,7 +1,7 @@
 multipliers:
-  # Sell multipliers are also permission based, please note that you MUST keep
-  # these values in ascending order, or it might not work as intended for players
-  # which have more than one of these permissions.
+  # Enables permission-based sell multipliers.
+  # IMPORTANT: Keep these multipliers in ascending order. If a player has
+  # multiple multiplier permissions, the highest valid multiplier will apply.
   enabled: true
   permissions:
     # Format: 'permission': 'multiplier'

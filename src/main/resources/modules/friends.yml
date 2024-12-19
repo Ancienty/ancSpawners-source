@@ -1,9 +1,6 @@
 friends:
-  # Friends module allows players to add 'friends' to their spawners, who
-  # are then allowed to access storage of the spawner, sell items from the
-  # storage, take items from the storage, etc. (basically have access to
-  # all features of the spawner) friends can't: break the spawner, add other friends.
-  # For a player to add friends to their spawners, they need the permission
-  # written below.
+  # The friends module lets players grant other players full access to their spawners’
+  # storage and features, except for breaking the spawner or adding more friends.
+  # To allow a player to add friends, they must have the following permission.
   enabled: true
   permission: ancspawners.friends
