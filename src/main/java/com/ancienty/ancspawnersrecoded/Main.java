@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
 public final class Main extends JavaPlugin {
@@ -64,6 +65,7 @@ public final class Main extends JavaPlugin {
     public YamlConfiguration lang;
     private boolean license_invalid;
     public HashMap<Player, Block> player_block_map = new HashMap<>();
+    private static final Map<String, ItemStack> HEAD_CACHE = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -761,6 +763,19 @@ public final class Main extends JavaPlugin {
     }
 
     public static ItemStack getHead(String value) {
-        return XSkull.createItem().profile(Profileable.detect(value)).apply();
+        // Check if the head is already cached
+        ItemStack cachedHead = HEAD_CACHE.get(value);
+        if (cachedHead != null) {
+            // Return a clone to ensure no accidental mutations on the cached instance
+            return cachedHead.clone();
+        }
+
+        // If not cached, create the item
+        ItemStack generatedHead = XSkull.createItem().profile(Profileable.detect(value)).apply();
+
+        // Store a clone in cache to avoid direct mutations affecting the stored reference
+        HEAD_CACHE.put(value, generatedHead.clone());
+
+        return generatedHead;
     }
 }

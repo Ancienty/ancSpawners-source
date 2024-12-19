@@ -16,38 +16,76 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
-        <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <filtering>true</filtering>
-      </resource>
-    </resources>
-  </build>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <relocations>
+                                <!-- Relocate HikariCP -->
+                                <relocation>
+                                    <pattern>com.zaxxer</pattern>
+                                    <shadedPattern>com.ancienty.utils.com.zaxxer</shadedPattern>
+                                </relocation>
+                                <!-- Relocate JSON -->
+                                <relocation>
+                                    <pattern>org.json</pattern>
+                                    <shadedPattern>com.ancienty.utils.org.json</shadedPattern>
+                                </relocation>
+                                <!-- Relocate XSeries -->
+                                <relocation>
+                                    <pattern>com.cryptomorin.xseries</pattern>
+                                    <shadedPattern>com.ancienty.utils.com.cryptomorin.xseries</shadedPattern>
+                                </relocation>
+                            </relocations>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>com/cryptomorin/xseries/XBiome*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XAttribute*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XBlock*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XEnchantment*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XItemFlag*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XPatternType*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XPotion*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XTag*</exclude>
+                                        <exclude>com/cryptomorin/xseries/XWorldBorder*</exclude>
+                                        <exclude>com/cryptomorin/xseries/NMSExtras*</exclude>
+                                        <exclude>com/cryptomorin/xseries/NoteBlockMusic*</exclude>
+                                        <exclude>com/cryptomorin/xseries/SkullCacheListener*</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
 
     <repositories>
         <repository>
@@ -78,6 +116,11 @@
         <repository>
             <id>glaremasters-repo</id>
             <url>https://repo.glaremasters.me/repository/towny/</url>
+        </repository>
+        <repository>
+            <id>minecraft-libraries</id>
+            <name>Minecraft Libraries</name>
+            <url>https://libraries.minecraft.net/</url>
         </repository>
     </repositories>
 
@@ -162,12 +205,18 @@
         <dependency>
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
-            <version>11.2.0.1</version>
+            <version>12.1.0</version>
         </dependency>
         <dependency>
             <groupId>com.github.brcdev-minecraft</groupId>
             <artifactId>shopgui-api</artifactId>
             <version>3.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.mojang</groupId>
+            <artifactId>authlib</artifactId>
+            <version>6.0.54</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
