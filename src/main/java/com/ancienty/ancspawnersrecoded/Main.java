@@ -96,11 +96,11 @@ public final class Main extends JavaPlugin {
         spawnerManager = new SpawnerManager();
 
         // Licensing (Disabled for SPIGOTMC)
-        /*Utils utils = new Utils();
+        Utils utils = new Utils();
         if (!utils.checkLicense()) {
             license_invalid = true;
             return;
-        }*/
+        }
 
         getLogger().info("Reading lang files & modules.");
 

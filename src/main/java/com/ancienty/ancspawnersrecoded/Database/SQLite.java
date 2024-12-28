@@ -21,17 +21,15 @@ public class SQLite {
             HikariConfig config = new HikariConfig();
             config.setJdbcUrl("jdbc:sqlite:" + Main.getPlugin().getDataFolder() + File.separator + "database.db");
 
-            // Connection Pool Settings
+            // Set a custom pool name
+            config.setPoolName("ancSpawners");
+
             config.setMaximumPoolSize(30);
             config.setMinimumIdle(7);
             config.setIdleTimeout(300000);
             config.setConnectionTimeout(20000);
             config.setMaxLifetime(1800000);
-
-            // Leak Detection
             config.setLeakDetectionThreshold(5000);
-
-            // Initialization Fail Timeout
             config.setInitializationFailTimeout(30000);
 
             if (!MinecraftVersion.isAtLeastVersion(MinecraftVersion.MC1_12_R1)) {
